@@ -32,7 +32,13 @@ class Config:
 
     @property
     def target(self) -> dict[str, Any]:
-        return {"url": "http://127.0.0.1:8787", "admin_token": "demo-admin-token", **self.raw.get("target", {})}
+        defaults = {
+            "url": "http://127.0.0.1:8787",
+            "admin_token": "demo-admin-token",
+            "policy_file": "",
+            "demo_agent_key": "",
+        }
+        return {**defaults, **self.raw.get("target", {})}
 
     @property
     def poligon(self) -> dict[str, Any]:

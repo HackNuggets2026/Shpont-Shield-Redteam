@@ -174,3 +174,28 @@ def test_impact_names_the_cause_of_a_change():
     assert _cause(old, "policy=bbb|feed=1|risk_levels=all normal") == ["policy"]
     assert _cause(old, "policy=aaa|feed=2|risk_levels=alice:watch") == ["feed", "risk_levels"]
     assert _cause(old, old) == []
+
+
+# --- hands-on actions -------------------------------------------------------------------
+
+
+def test_switching_a_control_edits_only_that_flag(tmp_path):
+    import yaml
+
+    from shpont_probe.server.demo import NotSwitchable, set_enabled, switchable
+
+    f = tmp_path / "policy.yaml"
+    f.write_text(
+        yaml.safe_dump({"secrets": {"mode": "block"}, "semantic_controls": {"prompt_injection": {"mode": "block"}}})
+    )
+    set_enabled(f, "secrets", False)
+    set_enabled(f, "prompt_injection", False)
+    set_enabled(f, "budget", False)
+    doc = yaml.safe_load(f.read_text())
+    assert doc["secrets"] == {"mode": "block", "enabled": False}
+    assert doc["semantic_controls"]["prompt_injection"]["enabled"] is False and doc["budgets"] == {"enabled": False}
+    set_enabled(f, "secrets", True)
+    assert yaml.safe_load(f.read_text())["secrets"]["enabled"] is True
+    assert switchable("secrets", doc) and switchable("prompt_injection", doc) and not switchable("auth", doc)
+    with pytest.raises(NotSwitchable):
+        set_enabled(f, "auth", False)

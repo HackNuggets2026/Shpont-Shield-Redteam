@@ -3,6 +3,10 @@
 target:
   url: ${SHIELD_URL:-http://127.0.0.1:8787}          # the control layer under test
   admin_token: ${ACL_ADMIN_TOKEN:-demo-admin-token}
+  # Optional, for the hands-on panel. policy_file: the control layer's policy, so the panel's switches can
+  # flip a control. demo_agent_key: an API key the "simulate a theft" button acts with.
+  policy_file: ${PROBE_POLICY_FILE:-}
+  demo_agent_key: ${PROBE_AGENT_KEY:-ops-agent-key}
 
 # --- Poligon: continuous self-attack ------------------------------------------
 poligon:

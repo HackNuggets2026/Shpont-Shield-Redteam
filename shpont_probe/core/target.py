@@ -94,6 +94,22 @@ class GatewayTarget:
     def events(self, limit: int = 200) -> list[dict[str, Any]]:
         return self.http.get("/admin/events", params={"limit": limit}).json()
 
+    def reload(self) -> None:
+        """Ask the gateway to re-read its policy now instead of waiting for its file watcher."""
+        self.http.post("/admin/policy/reload")
+
+    def guard(self, api_key: str, direction: str, text: str, tool: str | None = None) -> Decision:
+        """A real, metered and scored request, made with a caller's own API key."""
+        r = self.http.post(
+            "/v1/guard", headers={"x-api-key": api_key}, json={"direction": direction, "text": text, "tool": tool}
+        )
+        body = r.json()
+        if "action" not in body:
+            return Decision("error", error=f"HTTP {r.status_code}: {str(body)[:200]}")
+        return Decision(
+            body["action"], body.get("findings") or [], float((body.get("latency_ms") or {}).get("total", 0))
+        )
+
 
 class CallableTarget:
     """An in-process target: any function from Case to Decision. Used by tests and by the
@@ -118,3 +134,9 @@ class CallableTarget:
 
     def events(self, limit: int = 200) -> list[dict[str, Any]]:
         return self.event_log[-limit:][::-1]
+
+    def reload(self) -> None:
+        return None
+
+    def guard(self, api_key: str, direction: str, text: str, tool: str | None = None) -> Decision:
+        return self._fn(Case("guard", "attack", "live", text, direction=direction))

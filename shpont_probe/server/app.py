@@ -16,6 +16,7 @@ from fastapi.staticfiles import StaticFiles
 
 from ..config import Config
 from ..core.target import GatewayTarget, Target
+from ..core.types import DIRECTIONS, Case
 from ..poligon import corpus
 from ..poligon.feedcheck import check_feed
 from ..poligon.service import Poligon
@@ -24,8 +25,9 @@ from ..tripwire.detector import Detector
 from ..tripwire.drills import drill_cases
 from ..tripwire.feed import build_feed
 from ..tripwire.registry import Registry
+from .demo import NotSwitchable, set_enabled, switchable, theft_payload
 from .report import markdown
-from .stage import outcome_rows, rings, traffic_rows
+from .stage import outcome_rows, place, rings, traffic_rows
 
 STATIC = Path(__file__).parent / "static"
 
@@ -57,6 +59,7 @@ def create_app(cfg: Config, target: Target | None = None, background: bool = Tru
         workers=int(pol["workers"]),
     )
     stop = threading.Event()
+    policy_file = cfg.resolve(cfg.target["policy_file"]) if cfg.target["policy_file"] else None
 
     recent: dict[str, Any] = {"events": []}
 
@@ -120,6 +123,10 @@ def create_app(cfg: Config, target: Target | None = None, background: bool = Tru
         except Exception as e:  # noqa: BLE001
             info = {"name": getattr(target, "name", "?"), "error": f"{type(e).__name__}: {e}"}
         ring_list = rings(info)
+        doc = info.get("policy_doc") or {}
+        for ring in ring_list:
+            for seg in ring["segments"]:
+                seg["switchable"] = bool(policy_file) and switchable(seg["id"], doc)
         st, tw = poligon.state(), alerts.state()
         rep = st["report"] or {}
         tripped: dict[str, list[dict[str, Any]]] = {}
@@ -137,6 +144,9 @@ def create_app(cfg: Config, target: Target | None = None, background: bool = Tru
                 "semantic": (info.get("semantic") or {}).get("backend"),
             },
             "rings": ring_list,
+            "can_switch": bool(policy_file),
+            "can_steal": bool(cfg.target["demo_agent_key"]),
+            "corpus": st["corpus"],
             "run": st["runs"],
             "kpi": {
                 k: rep.get(k)
@@ -163,6 +173,55 @@ def create_app(cfg: Config, target: Target | None = None, background: bool = Tru
             "alerts": tw["alerts"][:12],
             "traffic": traffic_rows(recent["events"], ring_list),
         }
+
+    @app.post("/api/control")
+    async def control(request: Request):
+        """Switch one safeguard on or off in the control layer's policy file, then re-test at once."""
+        body = await request.json()
+        if not policy_file:
+            return JSONResponse({"error": "set target.policy_file in probe.yaml to use the switches"}, status_code=409)
+        try:
+            set_enabled(policy_file, str(body.get("id")), bool(body.get("enabled")))
+        except NotSwitchable as e:
+            return JSONResponse({"error": str(e)}, status_code=400)
+        with contextlib.suppress(Exception):
+            target.reload()
+        poligon.tick()
+        return {"ok": True}
+
+    @app.post("/api/try")
+    async def try_text(request: Request):
+        """Evaluate a visitor's own text on the live control layer (unmetered, unscored)."""
+        body = await request.json()
+        direction = body.get("direction", "input")
+        if direction not in DIRECTIONS:
+            return JSONResponse({"error": f"direction must be one of {list(DIRECTIONS)}"}, status_code=400)
+        d = target.evaluate(Case("visitor", "attack", "visitor", str(body.get("text", "")), direction=direction))
+        ring_list = rings(target.describe())
+        seg = place(d.findings, "", ring_list)[1] if d.stopped else None
+        label = next((s["label"] for r in ring_list for s in r["segments"] if s["id"] == seg), seg)
+        seen = sorted({f"{f.get('control')}/{f.get('category')}" for f in d.findings})
+        return {
+            "action": d.action,
+            "stopped": d.stopped,
+            "by": label,
+            "findings": seen,
+            "ms": round(d.latency_ms, 2),
+            "error": d.error,
+        }
+
+    @app.post("/api/steal")
+    async def steal(request: Request):
+        """Act as an agent that sends a decoy value out through a tool call: a real request, a real incident."""
+        body = await request.json()
+        decoy = registry.get(str(body.get("decoy")))
+        key = cfg.target["demo_agent_key"]
+        if decoy is None or not key:
+            return JSONResponse({"error": "unknown decoy, or target.demo_agent_key is not set"}, status_code=400)
+        direction = "tool_call" if "tool_call" in decoy.directions else decoy.directions[0]
+        d = target.guard(key, direction, theft_payload(decoy.value), "http_get")
+        poll_alerts()
+        return {"action": d.action, "stopped": d.stopped, "error": d.error}
 
     @app.post("/api/run")
     def run_now():

@@ -34,21 +34,21 @@ flowchart LR
 
 ## The panel
 
-`/` is one page built with Primer CSS, the same system and the same building blocks as the Shield panels, so its cards can be moved into the Shield security console as they are.
+`/` is a hands-on page, built with Primer CSS and the same building blocks as the Shield panels so its parts can move into the Shield console as they are.
 
-The page explains itself: a short "What this page shows" list at the top and one plain sentence under every card title.
+- **Top**: one sentence on what Shield and Probe are, the measured score, and a live feed of the real test messages being sent, each marked stopped, got through, allowed or blocked by mistake.
+- **1. Switch a safeguard off and see what gets through**: every Shield control with a one-line description and a switch. The switch flips `enabled` in Shield's real policy file; Probe re-tests at once and quotes the attacks that started passing.
+- **2. Send your own message**: type anything (or pick an example) and see which safeguard reacts, through the live layer.
+- **3. Traps**: the Tripwire decoys, with a "Simulate a theft" button that makes a real request as an agent and produces a real, attributed incident.
+- **Full results for the security team** (collapsed): open attacks, false positives, coverage by attack type, evasion, latency, feed check, report.
 
-- **Score**: the measured posture and the numbers behind it.
-- **What the last settings change did**: score before and after, and the attacks the edit let through or stopped again.
-- **Safeguards**: every control in evaluation order with its live status, attacks stopped, attacks missed and requests wrongly blocked.
-- **Traps** and **Who triggered a trap**: the Tripwire decoys and the incidents.
-- **Attacks that still get through**, **Results by type of attack**, **Attack signature list check**.
+The switches need `target.policy_file` in `probe.yaml` (set by `demo/up.sh`); the theft button needs `target.demo_agent_key`.
 
 ## Quick start
 
 ```bash
 python -m venv .venv && .venv/bin/pip install -e '.[dev]'
-.venv/bin/python -m pytest          # 54 tests, ~2 s; 4 of them run against the real Shield in-process
+.venv/bin/python -m pytest          # 57 tests, ~2 s; 4 of them run against the real Shield in-process
 
 # Shield checked out next to this repo, with its own .venv (see its README):
 demo/up.sh                          # starts both, decoys planted
@@ -106,6 +106,7 @@ Everything is in [`probe.yaml`](probe.yaml): the target, the corpus, the decoys 
 | `/api/state` | everything the dashboard shows, as JSON |
 | `/api/report.md`, `/api/report.json` | posture report for management and for the security team |
 | `POST /api/run` | fire the corpus now |
+| `POST /api/control`, `/api/try`, `/api/steal` | the three hands-on actions of the panel |
 | `POST /api/scan` | check any text against the decoys directly (SDK-style use, no gateway needed) |
 
 ## What was measured on Shield

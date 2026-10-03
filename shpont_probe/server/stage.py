@@ -120,6 +120,8 @@ def outcome_rows(outcomes: list[Outcome], ring_list: list[dict[str, Any]]) -> li
                 "ring": ring,
                 "seg": seg,
                 "rewrite": bool(o.case.parent),
+                "action": o.decision.action,
+                "text": o.case.text if len(o.case.text) <= 150 else o.case.text[:147] + "...",
             }
         )
     return rows
