@@ -219,3 +219,11 @@ def test_patch_policy_leaves_service_backed_resources_alone(registry):
     out, notes = patch_policy(policy, registry, cfg, "http://probe/feed.json")
     assert out["resources"] == policy["resources"] and out["signatures"]["feed"] == "http://probe/feed.json"
     assert any("SKIPPED planting ghost" in n for n in notes)
+
+
+def test_self_test_traffic_never_pushes_out_a_real_incident(registry):
+    store = AlertStore(registry, size=5)
+    store.ingest([_event("real", "bob", "TRIP-GHOST x")])
+    store.ingest([_event(f"d{i}", "alice", "TRIP-VAULT x", channel="dashboard") for i in range(50)])
+    s = store.state()
+    assert s["incidents"] == 1 and s["alerts"][0]["principal"] == "bob" and s["drills"] == 50

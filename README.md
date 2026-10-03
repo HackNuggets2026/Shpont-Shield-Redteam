@@ -36,11 +36,13 @@ flowchart LR
 
 `/` is one page built with Primer CSS, the same system and the same building blocks as the Shield panels, so its cards can be moved into the Shield security console as they are.
 
-- **Posture**: the measured score and the numbers behind it.
-- **Last configuration change**: posture before and after, which part of the configuration changed, and the attacks the edit opened or closed, case by case.
-- **Controls, in evaluation order**: every control with its live state (enforcing, log only, shadow, off), the attacks it stops, the attacks it is expected to catch that currently pass, and the legitimate requests it stops.
-- **Tripwire decoys** and **Decoy incidents**: what is planted, and who touched it.
-- **Getting through right now**, **Coverage by attack class**, **Signature feed self-test**.
+The page explains itself: a short "What this page shows" list at the top and one plain sentence under every card title.
+
+- **Score**: the measured posture and the numbers behind it.
+- **What the last settings change did**: score before and after, and the attacks the edit let through or stopped again.
+- **Safeguards**: every control in evaluation order with its live status, attacks stopped, attacks missed and requests wrongly blocked.
+- **Traps** and **Who triggered a trap**: the Tripwire decoys and the incidents.
+- **Attacks that still get through**, **Results by type of attack**, **Attack signature list check**.
 
 ## Quick start
 
@@ -54,7 +56,7 @@ demo/up.sh                          # starts both, decoys planted
 .venv/bin/shpont-probe run          # one corpus run in the terminal; --min-posture 85 for CI
 ```
 
-Open http://127.0.0.1:8799/, then edit `.run/policy.yaml` (set a control's `mode: log`, raise a threshold, delete a signature from the feed). The posture score and the "Last configuration change" card update within about three seconds.
+Open http://127.0.0.1:8799/, then edit `.run/policy.yaml` (set a control's `mode: log`, raise a threshold, delete a signature from the feed). The score and the "What the last settings change did" card update within about three seconds.
 
 ## Poligon
 

@@ -23,7 +23,9 @@ class AlertStore:
     def __init__(self, registry: Registry, sink: Path | None = None, size: int = 500):
         self.registry = registry
         self.sink = sink
+        # Incidents only. Drills are counted, never stored, so self-test traffic cannot push one out.
         self.alerts: deque[dict[str, Any]] = deque(maxlen=size)
+        self.drills = 0
         self._seen: set[tuple[str, str]] = set()
         if sink:
             sink.parent.mkdir(parents=True, exist_ok=True)
@@ -65,19 +67,22 @@ class AlertStore:
                     # Self-test traffic and dashboard playground runs trip decoys on purpose.
                     "drill": e.get("channel") == "dashboard",
                 }
-                self.alerts.appendleft(alert)
                 new.append(alert)
-                if self.sink and not alert["drill"]:
+                if alert["drill"]:
+                    self.drills += 1
+                    continue
+                self.alerts.appendleft(alert)
+                if self.sink:
                     with self.sink.open("a") as fh:
                         fh.write(json.dumps(alert) + "\n")
         return new
 
     def state(self) -> dict[str, Any]:
-        real = [a for a in self.alerts if not a["drill"]]
+        real = list(self.alerts)
         return {
             "decoys": [d.public() for d in self.registry.decoys],
             "alerts": real[:50],
-            "drills": sum(a["drill"] for a in self.alerts),
+            "drills": self.drills,
             "incidents": len(real),
             "by_principal": _count(real, "principal"),
         }
