@@ -1,6 +1,6 @@
-import { ArrowDownRight, ArrowUpRight } from "lucide-react"
+import { ArrowDownRight, ArrowUpRight, Check, ShieldAlert, ShieldCheck, TriangleAlert } from "lucide-react"
 import { useEffect, useState } from "react"
-import { Area, AreaChart, CartesianGrid, ReferenceDot, ReferenceLine, ResponsiveContainer, Tooltip, XAxis, YAxis } from "recharts"
+import { Area, AreaChart, CartesianGrid, ReferenceLine, ResponsiveContainer, Tooltip, XAxis, YAxis } from "recharts"
 
 import { Empty, Panel, Pill, Stat } from "@/components/bits"
 import { Flow } from "@/components/Flow"
@@ -8,28 +8,46 @@ import { ScoreRing } from "@/components/ScoreRing"
 import { Sheet, SheetContent, SheetDescription, SheetHeader, SheetTitle } from "@/components/ui/sheet"
 import { useToggleSafeguard } from "@/lib/actions"
 import type { Change, Stage, State } from "@/lib/api"
-import { clock, pct, scoreTone, segLabel, words } from "@/lib/format"
+import { cap, clock, pct, scoreTone, segLabel, words } from "@/lib/format"
 
 function changeTitle(c: Change, stage: Stage) {
   if (c.controls?.length) return c.controls.map((k) => `${segLabel(stage.rings, k.id)} ${k.what}`).join(", ")
   return `${words(c.cause.join(", ")) || "Settings"} changed`
 }
 
+const FEED = {
+  stopped: { icon: ShieldCheck, label: "Stopped", cls: "text-emerald-600 dark:text-emerald-400" },
+  through: { icon: ShieldAlert, label: "Got through", cls: "text-red-600 dark:text-red-400" },
+  wrong: { icon: TriangleAlert, label: "Wrongly blocked", cls: "text-amber-600 dark:text-amber-400" },
+  normal: { icon: Check, label: "Normal, allowed", cls: "text-muted-foreground" },
+} as const
+
 function LiveFeed({ stage }: { stage: Stage }) {
   const [at, setAt] = useState(0)
-  useEffect(() => { const t = setInterval(() => setAt((x) => x + 1), 1400); return () => clearInterval(t) }, [])
+  useEffect(() => { const t = setInterval(() => setAt((x) => x + 1), 1600); return () => clearInterval(t) }, [])
   const base = stage.outcomes.filter((o) => !o.rewrite)
   if (!base.length) return <Empty>Waiting for the first run.</Empty>
-  const rows = Array.from({ length: 8 }, (_, i) => base[(at + i * 17) % base.length])
+  const rows = Array.from({ length: 7 }, (_, i) => base[(at + i * 17) % base.length])
   return (
-    <ul className="space-y-2">
-      {rows.map((o, i) => (
-        <li key={`${o.id}-${i}`} className="flex items-center gap-2 text-sm">
-          {o.attack ? (o.stopped ? <Pill tone="good">attack stopped</Pill> : <Pill tone="bad">got through</Pill>)
-            : o.stopped ? <Pill tone="warn">blocked by mistake</Pill> : <Pill>normal, allowed</Pill>}
-          <span className="truncate text-muted-foreground" title={o.text}>{o.text}</span>
-        </li>
-      ))}
+    <ul className="divide-y">
+      {rows.map((o, i) => {
+        const kind = o.attack ? (o.stopped ? "stopped" : "through") : o.stopped ? "wrong" : "normal"
+        const { icon: Icon, label, cls } = FEED[kind]
+        return (
+          <li key={`${o.id}-${i}`} className="grid grid-cols-[1.25rem_minmax(0,1fr)] items-start gap-x-2.5 py-2.5">
+            <Icon className={`mt-0.5 size-4 ${cls}`} aria-hidden />
+            <div className="min-w-0">
+              <div className="flex items-baseline justify-between gap-2 text-sm">
+                <span className={`font-medium ${cls}`}>{o.attack ? `Attack ${label.toLowerCase()}` : label}</span>
+                <span className="shrink-0 text-xs text-muted-foreground">
+                  {o.stopped ? `by ${segLabel(stage.rings, o.seg)}` : cap(o.category)}
+                </span>
+              </div>
+              <p className="truncate font-mono text-xs text-muted-foreground" title={o.text}>{o.text}</p>
+            </div>
+          </li>
+        )
+      })}
     </ul>
   )
 }
@@ -40,12 +58,12 @@ export function Overview({ state, stage }: { state: State; stage: Stage }) {
   const [open, setOpen] = useState<Change | null>(null)
   if (!r) return <Empty>The first test run has not finished yet.</Empty>
 
-  const hist = state.poligon.history.slice(-60).map((h) => ({ t: clock(h.ts), ts: h.ts, score: h.posture ?? 0 }))
   const changes = state.poligon.changes.filter((c) => c.changed)
-  const pins = changes.map((c) => {
+  const hist = state.poligon.history.slice(-60).map((h) => ({ t: clock(h.ts), ts: h.ts, score: h.posture ?? 0, pin: "" }))
+  for (const c of changes) {
     const p = hist.find((h) => h.ts >= c.ts)
-    return p ? { x: p.t, y: c.posture_after ?? 0, down: (c.posture_after ?? 0) < (c.posture_before ?? 0), key: c.ts } : null
-  }).filter((p) => p !== null)
+    if (p) p.pin = (c.posture_after ?? 0) < (c.posture_before ?? 0) ? "down" : "up"
+  }
   const miss = r.attacks.total - r.attacks.stopped
   const tone = scoreTone(r.posture)
 
@@ -78,14 +96,16 @@ export function Overview({ state, stage }: { state: State; stage: Stage }) {
         {hist.length > 1 ? (
           <ResponsiveContainer width="100%" height={220}>
             <AreaChart data={hist} margin={{ top: 10, right: 12, bottom: 0, left: -18 }}>
-              <defs><linearGradient id="score" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stopColor="currentColor" stopOpacity={0.18} /><stop offset="1" stopColor="currentColor" stopOpacity={0} /></linearGradient></defs>
+              <defs><linearGradient id="score" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stopColor="currentColor" stopOpacity={0.08} /><stop offset="1" stopColor="currentColor" stopOpacity={0} /></linearGradient></defs>
               <CartesianGrid vertical={false} className="stroke-border" strokeDasharray="3 3" />
               <XAxis dataKey="t" tickLine={false} axisLine={false} tick={{ fontSize: 11, fill: "var(--muted-foreground)" }} minTickGap={48} />
-              <YAxis domain={[0, 100]} ticks={[0, 50, 90, 100]} tickLine={false} axisLine={false} tick={{ fontSize: 11, fill: "var(--muted-foreground)" }} />
+              <YAxis domain={[0, 100]} ticks={[0, 25, 50, 75, 100]} tickLine={false} axisLine={false} tick={{ fontSize: 11, fill: "var(--muted-foreground)" }} />
               <Tooltip contentStyle={{ borderRadius: 8, fontSize: 12, background: "var(--popover)", border: "1px solid var(--border)", color: "var(--popover-foreground)" }} />
-              <ReferenceLine y={90} stroke="#10b981" strokeDasharray="4 4" />
-              <Area type="stepAfter" dataKey="score" className="text-foreground" stroke="currentColor" strokeWidth={2} fill="url(#score)" isAnimationActive={false} />
-              {pins.map((p) => <ReferenceDot key={p.key} x={p.x} y={p.y} r={5} fill={p.down ? "#ef4444" : "#10b981"} stroke="var(--background)" strokeWidth={2} />)}
+              <ReferenceLine y={90} stroke="#10b981" strokeDasharray="4 4" label={{ value: "target 90", position: "insideTopRight", fontSize: 11, fill: "#10b981" }} />
+              <Area type="stepAfter" dataKey="score" className="text-foreground" stroke="currentColor" strokeWidth={2} fill="url(#score)" isAnimationActive={false}
+                dot={({ cx, cy, payload, index }) => payload.pin
+                  ? <circle key={index} cx={cx} cy={cy} r={5.5} fill={payload.pin === "down" ? "#ef4444" : "#10b981"} stroke="var(--card)" strokeWidth={2} />
+                  : <g key={index} />} />
             </AreaChart>
           </ResponsiveContainer>
         ) : <Empty>The line appears after the second test run.</Empty>}
@@ -110,7 +130,7 @@ export function Overview({ state, stage }: { state: State; stage: Stage }) {
         </ul>
       </Panel>
 
-      <Panel className="col-span-12 lg:col-span-4" title="Live test messages" hint="Real messages from the test set and what happened to them">
+      <Panel className="col-span-12 lg:col-span-4" title="Live test messages" hint="What we are sending right now, and what Shield did">
         <LiveFeed stage={stage} />
       </Panel>
 
