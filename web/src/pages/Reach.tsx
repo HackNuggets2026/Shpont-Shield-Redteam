@@ -1,8 +1,10 @@
-import { Download, Globe, KeyRound, Lock, Wrench } from "lucide-react"
+import { Bot, Download, Globe, Lock, Search, User, Wrench } from "lucide-react"
 import { useMemo, useState } from "react"
+import { Bar, BarChart, ResponsiveContainer, Tooltip, XAxis, YAxis } from "recharts"
 
 import { Empty, Num, Panel, Pill, Stat } from "@/components/bits"
-import { type Leg, type Reach as ReachData, type ReachIdentity, useReach } from "@/lib/api"
+import { Input } from "@/components/ui/input"
+import { type Leg, type ReachIdentity, useReach } from "@/lib/api"
 import { cn } from "@/lib/utils"
 
 const LEG: Record<Leg, { icon: typeof Lock; color: string; short: string }> = {
@@ -11,73 +13,51 @@ const LEG: Record<Leg, { icon: typeof Lock; color: string; short: string }> = {
   egress: { icon: Globe, color: "#ef4444", short: "Sends out" },
 }
 const LEGS: Leg[] = ["private", "untrusted", "egress"]
+type Filter = "flagged" | "agents" | "all"
 
-function Graph({ data, selected, onSelect }: { data: ReachData; selected: string | null; onSelect: (id: string) => void }) {
-  const W = 900, ROW = 30, TOP = 30
-  const cols = useMemo(() => {
-    const c: Record<number, typeof data.graph.nodes> = { 0: [], 1: [], 2: [] }
-    for (const n of data.graph.nodes) c[n.col].push(n)
-    c[1].sort((a, b) => (a.kind === b.kind ? a.label.localeCompare(b.label) : a.kind === "tool" ? -1 : 1))
-    return c
-  }, [data])
-  const H = TOP + Math.max(cols[0].length, cols[1].length, 3) * ROW + 10
-  const X = [140, 470, 760]
-  const pos: Record<string, { x: number; y: number }> = {}
-  for (const k of [0, 1, 2] as const) {
-    const list = cols[k], span = Math.max(cols[0].length, cols[1].length, 3) * ROW
-    list.forEach((n, i) => { pos[n.id] = { x: X[k], y: TOP + (span / list.length) * (i + 0.5) } })
-  }
-  // Highlight what the selected identity reaches.
-  const lit = new Set<string>()
-  if (selected) {
-    lit.add(`p:${selected}`)
-    for (const e of data.graph.edges) if (e.from === `p:${selected}`) { lit.add(e.to) }
-    for (const e of data.graph.edges) if (lit.has(e.from) && e.to.startsWith("l:")) {
-      const ident = data.identities.find((i) => i.id === selected)
-      const leg = e.to.slice(2) as Leg
-      if (ident?.legs[leg].some((s) => `${s.kind[0]}:${s.id}` === e.from)) lit.add(e.to)
+/** One identity, the tools and resources it holds, and the capability each one gives. */
+function EgoGraph({ who }: { who: ReachIdentity }) {
+  const sources = useMemo(() => {
+    const m = new Map<string, { id: string; kind: string; via: string; legs: Leg[] }>()
+    for (const leg of LEGS) for (const s of who.legs[leg]) {
+      const k = `${s.kind}:${s.id}`
+      const row = m.get(k) ?? { id: s.id, kind: s.kind, via: s.via, legs: [] }
+      row.legs.push(leg)
+      m.set(k, row)
     }
-  }
-  const on = (e: { from: string; to: string }) => !selected || (lit.has(e.from) && lit.has(e.to) && (e.from === `p:${selected}` || e.to.startsWith("l:")))
+    return [...m.values()].sort((a, b) => (a.kind === b.kind ? a.id.localeCompare(b.id) : a.kind === "tool" ? -1 : 1))
+  }, [who])
+  const ROW = 28, H = Math.max(sources.length, 3) * ROW + 20, W = 760, X = [80, 380, 650]
+  const ys = (i: number, n: number) => 10 + ((H - 20) / n) * (i + 0.5)
+  const legY = (leg: Leg) => ys(LEGS.indexOf(leg), 3)
   return (
-    <svg viewBox={`0 0 ${W} ${H}`} className="w-full" role="img" aria-label="Who can reach what">
-      {["People and agents", "Tools and resources", "Capabilities"].map((t, i) => (
-        <text key={t} x={X[i]} y={12} textAnchor="middle" className="fill-muted-foreground" style={{ font: "600 11px var(--font-sans)", letterSpacing: ".04em" }}>{t.toUpperCase()}</text>
-      ))}
-      {data.graph.edges.map((e, i) => {
-        const a = pos[e.from], b = pos[e.to]
-        if (!a || !b) return null
-        const leg = e.to.startsWith("l:") ? (e.to.slice(2) as Leg) : null
-        const x1 = a.x + (e.from.startsWith("p:") ? 70 : 60), x2 = b.x - (e.to.startsWith("l:") ? 80 : 60), mx = (x1 + x2) / 2
-        return <path key={i} d={`M${x1},${a.y} C${mx},${a.y} ${mx},${b.y} ${x2},${b.y}`} fill="none"
-          stroke={leg ? LEG[leg].color : "currentColor"} className={leg ? "" : "text-muted-foreground"}
-          strokeOpacity={on(e) ? (selected ? 0.75 : 0.22) : 0.05} strokeWidth={on(e) && selected ? 1.6 : 1} />
-      })}
-      {cols[0].map((n) => {
-        const p = pos[n.id], sel = selected === n.label
+    <svg viewBox={`0 0 ${W} ${H}`} className="w-full" role="img" aria-label={`What ${who.id} can reach`}>
+      {sources.map((s, i) => {
+        const y = ys(i, sources.length)
         return (
-          <g key={n.id} onClick={() => onSelect(n.label)} style={{ cursor: "pointer" }} opacity={!selected || sel ? 1 : 0.45}>
-            <rect x={p.x - 70} y={p.y - 12} width={140} height={24} rx={12} className={cn(sel ? "fill-foreground" : "fill-card", n.trifecta ? "stroke-red-500" : "stroke-border")} strokeWidth={n.trifecta ? 1.5 : 1} />
-            <text x={p.x - 56} y={p.y + 4} className={sel ? "fill-background" : "fill-foreground"} style={{ font: "600 12px var(--font-sans)" }}>{n.kind === "agent" ? "◆ " : ""}{n.label}</text>
-            {n.trifecta ? <circle cx={p.x + 56} cy={p.y} r={4} fill="#ef4444" /> : null}
+          <g key={s.kind + s.id}>
+            <path d={`M${X[0] + 62},${H / 2} C${X[0] + 170},${H / 2} ${X[1] - 170},${y} ${X[1] - 80},${y}`} fill="none" className="stroke-muted-foreground" strokeOpacity={0.35} />
+            {s.legs.map((leg) => (
+              <path key={leg} d={`M${X[1] + 80},${y} C${X[1] + 170},${y} ${X[2] - 170},${legY(leg)} ${X[2] - 78},${legY(leg)}`} fill="none" stroke={LEG[leg].color} strokeOpacity={0.6} strokeWidth={1.4} />
+            ))}
+            <rect x={X[1] - 80} y={y - 11} width={160} height={22} rx={6} className="fill-muted" />
+            <text x={X[1] - 70} y={y + 4} className="fill-foreground" style={{ font: `500 11px ${s.kind === "tool" ? "ui-monospace, monospace" : "var(--font-sans)"}` }}>
+              {s.id.length > 18 ? s.id.slice(0, 17) + "…" : s.id}
+            </text>
+            <text x={X[1] + 72} y={y + 4} textAnchor="end" className="fill-muted-foreground" style={{ font: "400 9px var(--font-sans)" }}>{s.via.startsWith("grant") ? "grant" : s.via.startsWith("role") ? "role" : "team"}</text>
           </g>
         )
       })}
-      {cols[1].map((n) => {
-        const p = pos[n.id]
+      <rect x={X[0] - 62} y={H / 2 - 16} width={124} height={32} rx={16} className={cn("fill-foreground", who.trifecta ? "stroke-red-500" : "")} strokeWidth={2} />
+      <text x={X[0]} y={H / 2 + 4} textAnchor="middle" className="fill-background" style={{ font: "600 12px var(--font-sans)" }}>
+        {who.id.length > 16 ? who.id.slice(0, 15) + "…" : who.id}
+      </text>
+      {LEGS.map((leg) => {
+        const has = who.legs[leg].length > 0
         return (
-          <g key={n.id} opacity={!selected || lit.has(n.id) ? 1 : 0.3}>
-            <rect x={p.x - 60} y={p.y - 10} width={120} height={20} rx={6} className="fill-muted" />
-            <text x={p.x - 52} y={p.y + 4} className="fill-foreground" style={{ font: `500 11px ${n.kind === "tool" ? "ui-monospace, monospace" : "var(--font-sans)"}` }}>{n.label.length > 17 ? n.label.slice(0, 16) + "…" : n.label}</text>
-          </g>
-        )
-      })}
-      {cols[2].map((n) => {
-        const p = pos[n.id], leg = n.id.slice(2) as Leg
-        return (
-          <g key={n.id} opacity={!selected || lit.has(n.id) ? 1 : 0.3}>
-            <rect x={p.x - 80} y={p.y - 15} width={160} height={30} rx={15} fill={LEG[leg].color} fillOpacity={0.14} stroke={LEG[leg].color} />
-            <text x={p.x} y={p.y + 4} textAnchor="middle" fill={LEG[leg].color} style={{ font: "600 12px var(--font-sans)" }}>{n.label}</text>
+          <g key={leg}>
+            <rect x={X[2] - 78} y={legY(leg) - 15} width={156} height={30} rx={15} fill={LEG[leg].color} fillOpacity={has ? 0.15 : 0.03} stroke={LEG[leg].color} strokeOpacity={has ? 1 : 0.25} strokeDasharray={has ? undefined : "4 4"} />
+            <text x={X[2]} y={legY(leg) + 4} textAnchor="middle" fill={LEG[leg].color} fillOpacity={has ? 1 : 0.4} style={{ font: "600 12px var(--font-sans)" }}>{LEG[leg].short}</text>
           </g>
         )
       })}
@@ -85,71 +65,112 @@ function Graph({ data, selected, onSelect }: { data: ReachData; selected: string
   )
 }
 
-function Legs({ who }: { who: ReachIdentity }) {
+function Dots({ who }: { who: ReachIdentity }) {
   return (
-    <div className="space-y-3">
-      {LEGS.map((leg) => {
-        const L = LEG[leg], srcs = who.legs[leg]
-        return (
-          <div key={leg} className={cn("rounded-lg border p-3", who.weakest === leg && "border-emerald-500/50 bg-emerald-500/5")}>
-            <div className="mb-1.5 flex items-center gap-2 text-sm font-medium">
-              <L.icon className="size-4" style={{ color: L.color }} />{L.short}
-              <span className="text-muted-foreground tabular-nums">{srcs.length}</span>
-              {who.weakest === leg ? <Pill tone="good" className="ml-auto">cut here: fewest sources</Pill> : null}
-            </div>
-            {srcs.length ? (
-              <div className="flex flex-wrap gap-1.5">
-                {srcs.map((s) => (
-                  <span key={s.key} className="rounded-md bg-muted px-2 py-0.5 text-xs" title={s.via}>
-                    <span className={s.kind === "tool" ? "font-mono" : ""}>{s.id}</span> <span className="text-muted-foreground">via {s.via.replace(":", " ")}</span>
-                  </span>
-                ))}
-              </div>
-            ) : <p className="text-xs text-muted-foreground">None. This capability is missing, so the combination is broken.</p>}
-          </div>
-        )
-      })}
-    </div>
+    <span className="flex gap-1">
+      {LEGS.map((leg) => <i key={leg} className="size-2 rounded-full" title={LEG[leg].short}
+        style={{ background: who.legs[leg].length ? LEG[leg].color : "transparent", border: `1px solid ${LEG[leg].color}` }} />)}
+    </span>
   )
 }
 
 export function Reach() {
   const { data } = useReach()
   const [sel, setSel] = useState<string | null>(null)
+  const [q, setQ] = useState("")
+  const [filter, setFilter] = useState<Filter>("flagged")
+  const byTeam = useMemo(() => {
+    const m: Record<string, { team: string; people: number; agents: number }> = {}
+    for (const i of data?.identities ?? []) {
+      if (!i.trifecta) continue
+      const t = (m[i.team] ??= { team: i.team, people: 0, agents: 0 })
+      if (i.kind === "agent") t.agents++
+      else t.people++
+    }
+    return Object.values(m).sort((a, b) => b.people + b.agents - a.people - a.agents).slice(0, 10)
+  }, [data])
   if (!data) return <Empty>Reading identities, grants and resources from Shield…</Empty>
-  const chosen = data.identities.find((i) => i.id === (sel ?? data.flagged[0])) ?? data.identities[0]
+
+  const list = data.identities
+    .filter((i) => (filter === "flagged" ? i.trifecta : filter === "agents" ? i.kind === "agent" : true))
+    .filter((i) => !q || `${i.id} ${i.team} ${i.role}`.toLowerCase().includes(q.toLowerCase()))
+    .sort((a, b) => Number(b.trifecta) - Number(a.trifecta) || Number(b.kind === "agent") - Number(a.kind === "agent") || a.id.localeCompare(b.id))
+  const chosen = data.identities.find((i) => i.id === sel) ?? list[0] ?? data.identities[0]
   const agents = data.identities.filter((i) => i.kind === "agent")
+
   return (
     <div className="grid grid-cols-12 gap-4">
       <div className="col-span-12 grid grid-cols-2 gap-4 lg:grid-cols-4">
-        <Stat label="People and agents" value={data.identities.length} sub={`${agents.length} agents`} />
-        <Stat label="Hold all three capabilities" value={<Num value={data.flagged.length} />} tone={data.flagged.length ? "bad" : "good"} sub="one planted instruction could move private data out" />
-        <Stat label="Agents among them" value={agents.filter((a) => a.trifecta).length} tone={agents.some((a) => a.trifecta) ? "bad" : "good"} />
-        <Stat label="Best single fix" value={data.fixes[0] ? `${data.fixes[0].fixes.length} fixed` : "none"} sub={data.fixes[0]?.change ?? "no single change breaks a combination"} />
+        <Stat label="People and agents" value={<Num value={data.identities.length} />} sub={`${agents.length} agents`} />
+        <Stat label="Could leak data with one planted instruction" value={<Num value={data.flagged.length} />} tone={data.flagged.length ? "bad" : "good"} sub="read private data + take in outside content + send out" />
+        <Stat label="Agents among them" value={<Num value={agents.filter((a) => a.trifecta).length} />} tone={agents.some((a) => a.trifecta) ? "bad" : "good"} />
+        <Stat label="Best single fix" value={data.fixes[0] ? <><Num value={data.fixes[0].fixes.length} /> fixed</> : "none"} sub={data.fixes[0]?.change ?? "no single change breaks a combination"} />
       </div>
-      <Panel className="col-span-12 xl:col-span-8" title="Who can reach what?" hint="Click a person or agent. Red ring: holds all three capabilities at once (private data, outside content, sending out).">
-        <Graph data={data} selected={chosen?.id ?? null} onSelect={setSel} />
+
+      <Panel className="col-span-12 lg:col-span-4" title="People and agents" hint="Dots: private data · outside content · sends out. All three filled means one planted instruction could move private data out.">
+        <div className="mb-2 flex gap-2">
+          <div className="relative flex-1">
+            <Search className="pointer-events-none absolute top-1/2 left-2.5 size-4 -translate-y-1/2 text-muted-foreground" />
+            <Input className="pl-8" placeholder="Search name or team" value={q} onChange={(e) => setQ(e.target.value)} aria-label="Search" />
+          </div>
+        </div>
+        <div className="mb-2 flex rounded-lg border p-0.5" role="group" aria-label="Filter">
+          {([["flagged", `At risk (${data.flagged.length})`], ["agents", `Agents (${agents.length})`], ["all", `All (${data.identities.length})`]] as const).map(([v, l]) => (
+            <button key={v} onClick={() => setFilter(v)} aria-pressed={filter === v}
+              className={cn("flex-1 rounded-md px-2 py-1 text-xs text-muted-foreground", filter === v && "bg-foreground text-background")}>{l}</button>
+          ))}
+        </div>
+        <ul className="max-h-[520px] divide-y overflow-y-auto">
+          {list.map((i) => (
+            <li key={i.id}>
+              <button onClick={() => setSel(i.id)} className={cn("flex w-full items-center gap-2 px-1.5 py-2 text-left text-sm hover:bg-muted/60", chosen?.id === i.id && "bg-muted")}>
+                {i.kind === "agent" ? <Bot className="size-4 shrink-0 text-muted-foreground" /> : <User className="size-4 shrink-0 text-muted-foreground" />}
+                <span className="min-w-0 flex-1"><span className="block truncate font-medium">{i.id}</span><span className="block truncate text-xs text-muted-foreground">{i.team} · {i.role}</span></span>
+                <Dots who={i} />
+              </button>
+            </li>
+          ))}
+          {!list.length ? <Empty>Nobody matches.</Empty> : null}
+        </ul>
       </Panel>
-      <div className="col-span-12 space-y-4 xl:col-span-4">
+
+      <div className="col-span-12 space-y-4 lg:col-span-8">
         {chosen ? (
-          <Panel title={chosen.id} hint={`${chosen.kind}${chosen.owner ? ` of ${chosen.owner}` : ""} · ${chosen.team}/${chosen.role}`}
-            action={chosen.trifecta ? <Pill tone="bad">all three</Pill> : <Pill tone="good">safe combination</Pill>}>
-            <Legs who={chosen} />
+          <Panel title={`What ${chosen.id} can reach`} hint={`${chosen.kind}${chosen.owner ? ` of ${chosen.owner}` : ""} · ${chosen.team}/${chosen.role}`}
+            action={chosen.trifecta ? <Pill tone="bad">could leak data</Pill> : <Pill tone="good">safe combination</Pill>}>
+            <EgoGraph who={chosen} />
+            {chosen.trifecta && chosen.weakest ? (
+              <p className="mt-2 rounded-lg bg-emerald-500/10 px-3 py-2 text-sm text-emerald-700 dark:text-emerald-400">
+                Cheapest fix: remove <b>{LEG[chosen.weakest].short.toLowerCase()}</b>. It comes from only {chosen.legs[chosen.weakest].length} place{chosen.legs[chosen.weakest].length > 1 ? "s" : ""}: {chosen.legs[chosen.weakest].map((s) => s.id).join(", ")}.
+              </p>
+            ) : null}
           </Panel>
         ) : null}
-        <Panel title="Changes that break the combination" hint="Ranked by how many identities each one fixes, then by how little it takes away">
-          {data.fixes.length ? (
-            <ul className="space-y-2">
-              {data.fixes.map((f) => (
-                <li key={f.key} className="rounded-lg border p-3 text-sm">
-                  <div className="flex items-center gap-2 font-medium"><Wrench className="size-4 text-muted-foreground" />{f.change}</div>
-                  <p className="mt-1 text-xs text-muted-foreground">Fixes <b className="text-foreground">{f.fixes.join(", ")}</b> · also affects {f.affects.filter((a) => !f.fixes.includes(a)).join(", ") || "nobody else"} · removes "{LEG[f.leg].short.toLowerCase()}"</p>
-                </li>
-              ))}
-            </ul>
-          ) : <Empty>No single change is enough: every flagged identity gets each capability from several places.</Empty>}
-          <p className="mt-3 flex items-start gap-1.5 text-xs text-muted-foreground"><KeyRound className="mt-0.5 size-3.5 shrink-0" />People are flagged too because their own AI sessions use the same tools; agents also inherit what their owner grants.</p>
-        </Panel>
+        <div className="grid gap-4 md:grid-cols-2">
+          <Panel title="Changes that fix the most" hint="Ranked by identities fixed, then by how few are affected">
+            {data.fixes.length ? (
+              <ul className="space-y-2">
+                {data.fixes.slice(0, 4).map((f) => (
+                  <li key={f.key} className="rounded-lg border p-2.5 text-sm">
+                    <div className="flex items-center gap-2 font-medium"><Wrench className="size-4 shrink-0 text-muted-foreground" />{f.change}</div>
+                    <p className="mt-0.5 text-xs text-muted-foreground"><b className="text-foreground">{f.fixes.length}</b> fixed · {f.affects.length} affected in total</p>
+                  </li>
+                ))}
+              </ul>
+            ) : <Empty>No single change is enough.</Empty>}
+          </Panel>
+          <Panel title="Where the risk sits" hint="Identities that could leak data, by team">
+            <ResponsiveContainer width="100%" height={230}>
+              <BarChart data={byTeam} layout="vertical" margin={{ left: 10, right: 10 }}>
+                <XAxis type="number" hide />
+                <YAxis type="category" dataKey="team" width={90} tickLine={false} axisLine={false} tick={{ fontSize: 11, fill: "var(--muted-foreground)" }} />
+                <Tooltip contentStyle={{ borderRadius: 8, fontSize: 12, background: "var(--popover)", border: "1px solid var(--border)", color: "var(--popover-foreground)" }} />
+                <Bar dataKey="people" stackId="a" fill="#a78bfa" name="people" radius={[0, 0, 0, 0]} />
+                <Bar dataKey="agents" stackId="a" fill="#ef4444" name="agents" radius={[0, 4, 4, 0]} />
+              </BarChart>
+            </ResponsiveContainer>
+          </Panel>
+        </div>
       </div>
     </div>
   )

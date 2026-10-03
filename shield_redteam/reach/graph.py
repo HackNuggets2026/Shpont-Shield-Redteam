@@ -203,7 +203,7 @@ def _describe(s: Source) -> str:
     if s.kind == "tool":
         return f"Remove {s.id} from the {s.via.split(':', 1)[1]} role"
     if s.via.startswith("grant:"):
-        return f"Revoke the {s.id} grant"
+        return f"Revoke the {s.id} grant {s.via.split(':', 1)[1]} gave an agent"
     return f"Narrow the {s.id} entitlement"
 
 

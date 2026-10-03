@@ -292,10 +292,24 @@ def create_app(cfg: Config, target: Target | None = None, background: bool = Tru
 
     # ---- reach map ----------------------------------------------------------------------
 
+    def with_directory(doc: dict[str, Any]) -> dict[str, Any]:
+        """Add the people of the policy's identity.directory (e.g. the Common-Database organisation)."""
+        rel = (doc.get("identity") or {}).get("directory")
+        if not rel or not policy_file:
+            return doc
+        path = Path(rel) if Path(rel).is_absolute() else policy_file.parent / rel
+        try:
+            extra = json.loads(path.read_text()).get("api_keys", {})
+        except (OSError, ValueError):
+            return doc
+        identity = dict(doc.get("identity") or {})
+        identity["api_keys"] = {**extra, **(identity.get("api_keys") or {})}
+        return {**doc, "identity": identity}
+
     @app.get("/api/reach")
     def reach():
         info = target.describe()
-        return build_reach(info.get("policy_doc") or {}, target.grants(), cfg.reach)
+        return build_reach(with_directory(info.get("policy_doc") or {}), target.grants(), cfg.reach)
 
     # ---- what-if: preview a settings change on the corpus and on real traffic -------------
 

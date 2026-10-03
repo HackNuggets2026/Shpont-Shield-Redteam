@@ -57,6 +57,10 @@ flowchart LR
 
 The switches need `target.policy_file` in `redteam.yaml` (set by `demo/up.sh`); the theft button needs `target.demo_agent_key`.
 
+## Shared organisation (Common-Database)
+
+`demo/up.sh` loads the team's shared organisation (ACME Bank, 120 people and 39 agents) when [Common-Database](https://github.com/HackNuggets2026/Common-Database) is checked out next to this repo (or `COMMON_DB=<path>`): the target Shield is seeded with its people, agents, grants and history, and the trap log gets a demo history. The Reach map reads the people from the policy's `identity.directory`.
+
 ## Quick start
 
 ```bash
