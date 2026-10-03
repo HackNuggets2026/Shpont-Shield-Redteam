@@ -19,7 +19,7 @@ shield-redteam = "shield_redteam.cli:main"
 include = ["shield_redteam*"]
 
 [tool.setuptools.package-data]
-shield_redteam = ["server/static/*", "server/static/console/*", "server/static/console/views/*"]
+shield_redteam = ["server/static/*", "server/static/app/*", "server/static/app/assets/*", "server/static/console/*", "server/static/console/views/*"]
 
 [tool.pytest.ini_options]
 testpaths = ["tests"]

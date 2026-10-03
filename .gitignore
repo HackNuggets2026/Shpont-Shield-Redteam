@@ -5,3 +5,5 @@ __pycache__/
 .ruff_cache/
 data/
 .run/
+web/node_modules/
+web/*.tsbuildinfo

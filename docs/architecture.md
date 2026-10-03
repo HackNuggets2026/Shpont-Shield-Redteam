@@ -16,6 +16,7 @@ shield_redteam/
   cli.py         serve | run | feed | tokens | plant
 corpus/          attacks/*.yaml, benign/*.yaml
 tests/           unit tests on a fake layer + integration tests on the real Shield
+web/             the dashboard source (React + Tailwind + shadcn/ui); builds into shield_redteam/server/static/app
 demo/            up.sh, intruder.py
 ```
 

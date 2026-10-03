@@ -34,15 +34,15 @@ flowchart LR
 
 ## The dashboard
 
-`/` is a dashboard with a left navigation and five sections. Every block is titled with the question it answers and is drawn from the live layer (charts: Apache ECharts, vendored, works offline). The header keeps five numbers in view on every section: score, attacks stopped, normal requests blocked, delay per message, trap incidents.
+`/` is a React app (`web/`: React, TypeScript, Tailwind, shadcn/ui, Recharts) with a left navigation, light and dark themes, and five sections. Every block is titled with the question it answers and is drawn from the live layer. The built bundle ships inside the Python package, so there is no Node at runtime.
 
-| Section | Blocks | Wired to |
+| Section | Shows | Wired to |
 |---|---|---|
-| **Overview** | score gauge; flow diagram (attacks and normal requests, the safeguard that caught each, the outcome); score per run with a pin on every settings change; live test messages | the last corpus run and Poligon's change log; clicking a safeguard in the flow switches it off |
-| **Safeguards** | every control in evaluation order with an ON/OFF switch and what it stopped, missed and wrongly blocked | the switch flips `enabled` in Shield's real policy file, then the corpus is re-fired |
-| **Attacks** | coverage map (attack type by channel), disguise radar, attacks that still get through, normal requests blocked by mistake | per-case outcomes and evasion mutants |
-| **Traps** | Tripwire decoys with "Simulate theft", attributed incidents | a real request with an agent key, then Shield's audit trail |
-| **Try a message** | type any message, see which safeguard reacts, keep a short history | the live layer |
+| **Overview** | four key numbers; the score ring; a flow diagram (what we send, the safeguard that caught it, the result); score per run with a dot on every settings change and a change log that opens the affected attacks; live test messages | the last corpus run and Poligon's change log; clicking a safeguard in the flow switches it off |
+| **Safeguards** | every control grouped by stage, with a switch and a stopped / got-through bar | the switch flips `enabled` in Shield's real policy file, the corpus is re-fired, a toast offers undo |
+| **Attacks** | coverage map (attack type by channel), disguise radar, filterable lists of attacks that pass, wrong blocks and evasions, with a detail drawer per case | per-case outcomes and evasion mutants |
+| **Traps** | one card per Tripwire decoy with "Simulate theft", and an incident timeline naming who used it | a real request with an agent key, then Shield's audit trail |
+| **Playground** | write any message, pick the channel, see which safeguard reacted and how fast | the live layer, unmetered |
 
 `/console` shows the same data as five tabs inside the Shield security console shell: Redteam's part there is one file, `shield_redteam/server/static/console/views/redteam.js`, written against Shield's `docs/console-contract.md`. To merge into Shield: copy it into `controllayer/dashboard/views/`, add its script tag to `panel.html`, set `window.REDTEAM_API` to the Redteam service.
 

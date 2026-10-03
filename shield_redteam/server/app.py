@@ -86,6 +86,7 @@ def create_app(cfg: Config, target: Target | None = None, background: bool = Tru
     app = FastAPI(title="Shpont Shield Redteam", lifespan=lifespan)
     app.state.poligon, app.state.alerts, app.state.registry = poligon, alerts, registry
     app.mount("/static", StaticFiles(directory=STATIC), name="static")
+    app.mount("/app", StaticFiles(directory=STATIC / "app"), name="app")
 
     def feed() -> tuple[dict[str, Any], str]:
         base, err = load_base_feed(cfg)
@@ -258,7 +259,8 @@ def create_app(cfg: Config, target: Target | None = None, background: bool = Tru
 
     @app.get("/")
     def index():
-        return FileResponse(STATIC / "index.html")
+        """The dashboard: a React app built from web/ into static/app (see web/README.md)."""
+        return FileResponse(STATIC / "app" / "index.html")
 
     @app.get("/console")
     def console():
