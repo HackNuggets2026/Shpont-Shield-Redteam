@@ -38,7 +38,7 @@ flowchart LR
 
 | Section | Shows | Wired to |
 |---|---|---|
-| **Overview** | four key numbers; the score ring; a flow diagram (what we send, the safeguard that caught it, the result); score per run with a dot on every settings change and a change log that opens the affected attacks; live test messages | the last corpus run and Poligon's change log; clicking a safeguard in the flow switches it off |
+| **Overview** | four key numbers; the score ring; a pipeline drawing (attacks and normal requests pass five stages; each lane narrows by what a stage caught, and the safeguards under each stage are switches); score per run with a dot on every settings change and a change log that opens the affected attacks; live test messages | the last corpus run and Poligon's change log; clicking a safeguard under a stage switches it off |
 | **Safeguards** | every control grouped by stage, with a switch and a stopped / got-through bar | the switch flips `enabled` in Shield's real policy file, the corpus is re-fired, a toast offers undo |
 | **Attacks** | coverage map (attack type by channel), disguise radar, filterable lists of attacks that pass, wrong blocks and evasions, with a detail drawer per case | per-case outcomes and evasion mutants |
 | **Traps** | one card per Tripwire decoy with "Simulate theft", and an incident timeline naming who used it | a real request with an agent key, then Shield's audit trail |

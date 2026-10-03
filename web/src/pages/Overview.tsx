@@ -3,7 +3,7 @@ import { useEffect, useState } from "react"
 import { Area, AreaChart, CartesianGrid, ReferenceLine, ResponsiveContainer, Tooltip, XAxis, YAxis } from "recharts"
 
 import { Empty, Panel, Pill, Stat } from "@/components/bits"
-import { Flow } from "@/components/Flow"
+import { Pipeline } from "@/components/Pipeline"
 import { ScoreRing } from "@/components/ScoreRing"
 import { Sheet, SheetContent, SheetDescription, SheetHeader, SheetTitle } from "@/components/ui/sheet"
 import { useToggleSafeguard } from "@/lib/actions"
@@ -27,14 +27,14 @@ function LiveFeed({ stage }: { stage: Stage }) {
   useEffect(() => { const t = setInterval(() => setAt((x) => x + 1), 1600); return () => clearInterval(t) }, [])
   const base = stage.outcomes.filter((o) => !o.rewrite)
   if (!base.length) return <Empty>Waiting for the first run.</Empty>
-  const rows = Array.from({ length: 7 }, (_, i) => base[(at + i * 17) % base.length])
+  const rows = Array.from({ length: 8 }, (_, i) => base[(at + i * 17) % base.length])
   return (
-    <ul className="divide-y">
+    <ul className="grid gap-x-8 md:grid-cols-2">
       {rows.map((o, i) => {
         const kind = o.attack ? (o.stopped ? "stopped" : "through") : o.stopped ? "wrong" : "normal"
         const { icon: Icon, label, cls } = FEED[kind]
         return (
-          <li key={`${o.id}-${i}`} className="grid grid-cols-[1.25rem_minmax(0,1fr)] items-start gap-x-2.5 py-2.5">
+          <li key={`${o.id}-${i}`} className="grid grid-cols-[1.25rem_minmax(0,1fr)] items-start gap-x-2.5 border-b py-2.5">
             <Icon className={`mt-0.5 size-4 ${cls}`} aria-hidden />
             <div className="min-w-0">
               <div className="flex items-baseline justify-between gap-2 text-sm">
@@ -54,7 +54,7 @@ function LiveFeed({ stage }: { stage: Stage }) {
 
 export function Overview({ state, stage }: { state: State; stage: Stage }) {
   const r = state.poligon.report
-  const { toggle } = useToggleSafeguard(stage.can_switch)
+  const { toggle, pending } = useToggleSafeguard(stage.can_switch)
   const [open, setOpen] = useState<Change | null>(null)
   if (!r) return <Empty>The first test run has not finished yet.</Empty>
 
@@ -76,6 +76,10 @@ export function Overview({ state, stage }: { state: State; stage: Stage }) {
         <Stat label="Delay added per message" value={`${r.latency_ms.p95} ms`} sub="slowest 5% of messages" />
       </div>
 
+      <Panel className="col-span-12" title="What happens to every test message?" hint="Messages enter on the left and pass five stages. Each stage takes out what it catches. Click a safeguard to switch it off.">
+        <Pipeline stage={stage} onToggle={toggle} pending={pending} />
+      </Panel>
+
       <Panel className="col-span-12 lg:col-span-4" title="How safe is it right now?" hint="Measured by attacking the firewall, not estimated">
         <div className="flex flex-col items-center">
           <ScoreRing value={r.posture} />
@@ -86,10 +90,6 @@ export function Overview({ state, stage }: { state: State; stage: Stage }) {
             {tone === "good" ? "Above the target of 90." : tone === "warn" ? "Below the target of 90." : "Far below the target of 90."} {r.cases} test messages in {r.seconds} s.
           </p>
         </div>
-      </Panel>
-
-      <Panel className="col-span-12 lg:col-span-8" title="What happens to every test message?" hint="Left: what we send. Middle: the safeguard that caught it. Right: the result. Click a safeguard to switch it off.">
-        <Flow stage={stage} onPick={(seg, name) => toggle(seg, name, false)} />
       </Panel>
 
       <Panel className="col-span-12 lg:col-span-8" title="Did a settings change break anything?" hint="Score after every test run. A dot marks a change in Shield's settings.">
@@ -130,7 +130,7 @@ export function Overview({ state, stage }: { state: State; stage: Stage }) {
         </ul>
       </Panel>
 
-      <Panel className="col-span-12 lg:col-span-4" title="Live test messages" hint="What we are sending right now, and what Shield did">
+      <Panel className="col-span-12" title="Live test messages" hint="What we are sending right now, and what Shield did">
         <LiveFeed stage={stage} />
       </Panel>
 

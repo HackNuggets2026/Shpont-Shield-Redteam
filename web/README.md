@@ -15,6 +15,6 @@ The built bundle is committed, so `shield-redteam serve` shows the dashboard wit
 |---|---|
 | `src/lib/api.ts` | types for `/api/state` and `/api/stage`, the 2-second live query, the three actions (switch, steal, re-test) |
 | `src/components/AppShell.tsx` | sidebar, header, theme toggle |
-| `src/components/Flow.tsx` | the flow diagram (source, safeguard, outcome) |
+| `src/components/Pipeline.tsx` | the pipeline drawing: two lanes that narrow at every stage by what it caught, with the safeguards under each stage |
 | `src/pages/*` | Overview, Safeguards, Attacks, Traps, Playground |
 | `src/components/ui/*` | shadcn/ui components, generated with `npx shadcn add` |
