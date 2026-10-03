@@ -4,6 +4,7 @@ import { Route, Routes } from "react-router-dom"
 import { AppShell } from "@/components/AppShell"
 import { Skeleton } from "@/components/ui/skeleton"
 import { useLive } from "@/lib/api"
+import { About } from "@/pages/About"
 import { Attacks } from "@/pages/Attacks"
 import { Autopatch } from "@/pages/Autopatch"
 import { Overview } from "@/pages/Overview"
@@ -29,6 +30,7 @@ export default function App() {
         error ? null : <div className="grid grid-cols-12 gap-4"><Skeleton className="col-span-12 h-24" /><Skeleton className="col-span-4 h-80" /><Skeleton className="col-span-8 h-80" /></div>
       ) : (
         <Routes>
+          <Route path="/about" element={<About state={state} stage={stage} />} />
           <Route path="/" element={<Overview state={state} stage={stage} />} />
           <Route path="/safeguards" element={<Safeguards state={state} stage={stage} />} />
           <Route path="/attacks" element={<Attacks state={state} stage={stage} />} />

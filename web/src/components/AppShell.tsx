@@ -1,4 +1,4 @@
-import { Crosshair, FlaskConical, GitCompareArrows, LayoutDashboard, Moon, Network, RefreshCw, ShieldCheck, Siren, Sun, Swords, Wand2 } from "lucide-react"
+import { BookOpen, Crosshair, FlaskConical, GitCompareArrows, LayoutDashboard, Moon, Network, RefreshCw, ShieldCheck, Siren, Sun, Swords, Wand2 } from "lucide-react"
 import type { ReactNode } from "react"
 import { NavLink, useLocation } from "react-router-dom"
 import { toast } from "sonner"
@@ -10,6 +10,7 @@ import { useTheme } from "@/lib/theme"
 import { cn } from "@/lib/utils"
 
 const NAV = [
+  { to: "/about", label: "Start here", icon: BookOpen },
   { to: "/", label: "Overview", icon: LayoutDashboard },
   { to: "/safeguards", label: "Safeguards", icon: ShieldCheck },
   { to: "/attacks", label: "Attacks", icon: Swords },
@@ -20,6 +21,7 @@ const NAV = [
   { to: "/playground", label: "Playground", icon: FlaskConical },
 ]
 const TITLE: Record<string, [string, string]> = {
+  "/about": ["Start here", "What this project is and what I add, in two minutes"],
   "/": ["Overview", "Is the AI firewall holding, right now?"],
   "/safeguards": ["Safeguards", "Switch a protection off and see what it was stopping"],
   "/attacks": ["Attacks", "What gets through, and how attackers disguise it"],
