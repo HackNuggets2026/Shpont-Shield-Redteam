@@ -26,9 +26,15 @@ def patch_policy(
     notes.append(f"signatures.feed -> {feed_url} (refresh {refresh_seconds}s)")
 
     resources = {k: dict(v) for k, v in (out.get("resources") or {}).items()}
+    # Newer Shield versions keep resource data in code (controllayer.services), not in the policy,
+    # so there is nothing in the file to plant into: those decoys stay feed-only.
+    brokered = any(r.get("type") == "service" for r in resources.values())
     for raw in decoy_cfg:
         decoy = registry.get(str(raw["id"]))
-        if decoy is None:
+        if decoy is None or not ({"resource", "plant"} & raw.keys()):
+            continue
+        if brokered:
+            notes.append(f"SKIPPED planting {decoy.id}: this policy keeps resource data in service code")
             continue
         if "resource" in raw:
             r = dict(raw["resource"])
@@ -56,5 +62,6 @@ def patch_policy(
             conn["mock_responses"] = mocks
             target["connection"] = conn
             notes.append(f"{decoy.cls} {decoy.id!r} planted in {p['resource']} at {p['path']!r}")
-    out["resources"] = resources
+    if resources:
+        out["resources"] = resources
     return out, notes

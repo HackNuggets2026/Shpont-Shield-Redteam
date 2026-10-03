@@ -211,3 +211,11 @@ def test_drills_cover_every_decoy_and_are_caught_by_the_detector(registry):
     det = Detector(registry)
     assert all(det.scan(c.text, c.direction) for c in cases)
     assert all(c.must_stop and not c.mutable for c in cases)
+
+
+def test_patch_policy_leaves_service_backed_resources_alone(registry):
+    policy = {"signatures": {}, "resources": {"crm": {"type": "service", "connection": {"service": "crm"}}}}
+    cfg = [{"id": "ghost", "plant": {"resource": "crm", "path": "GET /accounts", "body": "{value}"}}]
+    out, notes = patch_policy(policy, registry, cfg, "http://probe/feed.json")
+    assert out["resources"] == policy["resources"] and out["signatures"]["feed"] == "http://probe/feed.json"
+    assert any("SKIPPED planting ghost" in n for n in notes)

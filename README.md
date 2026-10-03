@@ -32,17 +32,15 @@ flowchart LR
   P & A --> UI
 ```
 
-## The stage
+## The panel
 
-`/` is one screen built for a projector. Both halves are driven by the same live data, nothing is scripted.
+`/` is one page built with Primer CSS, the same system and the same building blocks as the Shield panels, so its cards can be moved into the Shield security console as they are.
 
-- **Shield, plan view.** The control layer drawn as rings in the order it evaluates them: access, budgets, deterministic checks, contextual PII, semantic controls. Each arc is one control and takes its state from the live policy: enforcing, log-only, shadow or switched off. Every dot is a payload Poligon fired at the real layer; it stops on the control that stopped it. A dot that reaches the centre is an attack that got through. The centre shows the measured posture score.
-- **Cross-section.** The same pipeline cut the other way: stages as floors, the five kinds of traffic as lanes (prompt, tool call, model reply, tool result, tool listing). Each cell counts what was stopped there, the vault row counts what was delivered.
-- **Decoy rooms.** One room per Tripwire decoy. A real hit lights the room, flashes its marker on the shield and names the agent.
-- **Change banner.** Edit the policy or the feed: within about three seconds the affected arc changes state, the banner states the posture delta and what is now getting through, and the dots start passing the open arc.
-- **Live traffic.** Real requests through the gateway (not self-test) fly in as larger dots labelled with the principal.
-
-`/details` has the full lists (open attacks, false positives, evasions, feed self-test) for the security team. Press `f` on the stage for full screen.
+- **Posture**: the measured score and the numbers behind it.
+- **Last configuration change**: posture before and after, which part of the configuration changed, and the attacks the edit opened or closed, case by case.
+- **Controls, in evaluation order**: every control with its live state (enforcing, log only, shadow, off), the attacks it stops, the attacks it is expected to catch that currently pass, and the legitimate requests it stops.
+- **Tripwire decoys** and **Decoy incidents**: what is planted, and who touched it.
+- **Getting through right now**, **Coverage by attack class**, **Signature feed self-test**.
 
 ## Quick start
 
@@ -56,7 +54,7 @@ demo/up.sh                          # starts both, decoys planted
 .venv/bin/shpont-probe run          # one corpus run in the terminal; --min-posture 85 for CI
 ```
 
-Open http://127.0.0.1:8799/, then edit `.run/policy.yaml` (set a control's `mode: log`, raise a threshold, delete a signature from the feed). The posture score and the "What configuration changes did" panel update within about three seconds.
+Open http://127.0.0.1:8799/, then edit `.run/policy.yaml` (set a control's `mode: log`, raise a threshold, delete a signature from the feed). The posture score and the "Last configuration change" card update within about three seconds.
 
 ## Poligon
 
@@ -100,9 +98,8 @@ Everything is in [`probe.yaml`](probe.yaml): the target, the corpus, the decoys 
 
 | Endpoint | For |
 |---|---|
-| `/` | the stage: shield, cross-section, decoy rooms |
-| `/details` | detail dashboard for the security team |
-| `/api/stage` | rings, per-payload outcomes, live traffic and decoy state for the stage |
+| `/` | the panel |
+| `/api/stage` | controls in evaluation order with live state, and where each payload stopped |
 | `/feed/signatures.json` | the managed feed plus one signature per decoy; point the control layer's `signatures.feed` here |
 | `/api/state` | everything the dashboard shows, as JSON |
 | `/api/report.md`, `/api/report.json` | posture report for management and for the security team |

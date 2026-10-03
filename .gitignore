@@ -5,5 +5,3 @@ __pycache__/
 .ruff_cache/
 data/
 .run/
-.impeccable/shots/
-.impeccable/ref/

@@ -184,10 +184,6 @@ def create_app(cfg: Config, target: Target | None = None, background: bool = Tru
 
     @app.get("/")
     def index():
-        return FileResponse(STATIC / "stage.html")
-
-    @app.get("/details")
-    def details():
         return FileResponse(STATIC / "index.html")
 
     return app
