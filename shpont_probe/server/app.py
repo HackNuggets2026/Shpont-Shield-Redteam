@@ -12,6 +12,7 @@ from typing import Any
 import httpx
 from fastapi import FastAPI, Request
 from fastapi.responses import FileResponse, JSONResponse, PlainTextResponse
+from fastapi.staticfiles import StaticFiles
 
 from ..config import Config
 from ..core.target import GatewayTarget, Target
@@ -81,6 +82,7 @@ def create_app(cfg: Config, target: Target | None = None, background: bool = Tru
 
     app = FastAPI(title="Shpont Probe", lifespan=lifespan)
     app.state.poligon, app.state.alerts, app.state.registry = poligon, alerts, registry
+    app.mount("/static", StaticFiles(directory=STATIC), name="static")
 
     def feed() -> tuple[dict[str, Any], str]:
         base, err = load_base_feed(cfg)

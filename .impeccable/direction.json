@@ -1,0 +1,64 @@
+{
+  "title": "Wybierz świat wizualny ekranu Shpont",
+  "question": "Wylosowany kierunek to Tablica odlotów. Zostaw go, weź alternatywę albo losuj ponownie.",
+  "options": [
+    {
+      "id": "assigned",
+      "label": "Tablica odlotów",
+      "kicker": "LOS",
+      "lineage": "tablice klapkowe Solari i żółte oznakowanie lotnisk",
+      "thesis": "Każdy atak to lot na tablicy: jedna zmiana w configu i wiersze z klekotem przeskakują z ZATRZYMANY na PRZESZEDŁ.",
+      "palette": ["#ffd200", "#111111", "#f4f1e8", "#e2231a"],
+      "materials": ["czarne klapki z białą literą", "żółta tablica kierunkowa", "pismo znaków drogowych"],
+      "viewport": "Żółte pole na całą szerokość. U góry jedna zmieniona linia configu jak komunikat. Pod nią czarna tablica klapkowa: klasy ataków w wierszach, status przeskakuje klapka po klapce, obok duży wynik posture.",
+      "risk": "Tablica jest czarna, więc trzeba pilnować, żeby całość została żółta i jasna, a nie ciemna."
+    },
+    {
+      "id": "challenger-industrial",
+      "label": "Etykieta magazynowa",
+      "lineage": "przemysłowa grafika: cudzysłowy, pasy ostrzegawcze, pomarańczowe plomby",
+      "thesis": "Białe tło, wielkie czarne wersaliki w cudzysłowach, a przez każdą wyłączoną kontrolę leci ukośny pas ostrzegawczy.",
+      "case": "Łączy się dobrze: \"OFF\" i pas ostrzegawczy czyta się bez słowa wyjaśnienia, ale świat mody jest daleko od jury z banku.",
+      "palette": ["#ffffff", "#0a0a0a", "#ff5a00"],
+      "materials": ["biała bawełna", "czarny nylon", "pomarańczowa plomba"],
+      "viewport": "Biała plansza z etykietami kontroli jak szablony na skrzyniach. Zmieniona kontrola dostaje pomarańczową plombę i pas ostrzegawczy.",
+      "risk": "Może wyglądać jak plakat marki odzieżowej zamiast narzędzia bezpieczeństwa.",
+      "hero": "https://impeccable.style/worlds/cards/textiles-weave-drape-fashion-industrial-quote-grammar-hero.webp",
+      "board": "https://impeccable.style/worlds/cards/textiles-weave-drape-fashion-industrial-quote-grammar.webp"
+    },
+    {
+      "id": "challenger-jackfield",
+      "label": "Krosownica",
+      "lineage": "schemat połączeń w maszynowni studia",
+      "thesis": "Każda kontrola to tor z linią połączenia: cała linia znaczy działa, przerwa w linii znaczy wyłączona.",
+      "case": "Łączy się bardzo dobrze z mechaniką (stan rysowany kreską, nie kolorem), ale to czarne szkło i bursztyn, czyli znów ciemny ekran.",
+      "palette": ["#0b0b0b", "#ffb000"],
+      "materials": ["czarne szkło", "bursztynowa linia"],
+      "viewport": "Ponumerowane tory na czarnym tle, jedna bursztynowa płyta z wynikiem. Zmiana configu przerywa linię toru.",
+      "risk": "Ciemne tło, które już raz odrzuciłeś.",
+      "hero": "https://impeccable.style/worlds/cards/operate-b-normalled-jackfield-hero.webp",
+      "board": "https://impeccable.style/worlds/cards/operate-b-normalled-jackfield.webp"
+    },
+    {
+      "id": "challenger-cutting",
+      "label": "Stół montażowy",
+      "lineage": "taśma filmowa na stole montażysty",
+      "thesis": "Ataki jako klatki na perforowanej taśmie; stan to znak na klatce: krzyżyk, dziurka, flaga z taśmy.",
+      "case": "Łączy się średnio: taśma dobrze niesie sekwencję, ale nie tłumaczy, czemu zmiana configu coś otwiera.",
+      "palette": ["#000000", "#ff6a00", "#ffffff"],
+      "materials": ["ziarno filmu", "pomarańczowa taśma"],
+      "viewport": "Pomarańczowe pole z perforowaną szyną klatek przez środek, odrzucone klatki wiszą na szpilkach poniżej.",
+      "risk": "Metafora filmowa wymaga chwili, żeby ją odczytać.",
+      "hero": "https://impeccable.style/worlds/cards/operate-a-cutting-bench-select-rail-hero.webp",
+      "board": "https://impeccable.style/worlds/cards/operate-a-cutting-bench-select-rail.webp"
+    }
+  ],
+  "reroll": true,
+  "canon": true,
+  "canonCard": {
+    "label": "Standard kategorii",
+    "thesis": "Czysty panel bezpieczeństwa w stylu Datadog albo Grafana, zrobiony porządnie.",
+    "viewport": "Jasny lub ciemny panel z wykresami, tabelą zdarzeń i kafelkami liczb."
+  },
+  "steer": true
+}
