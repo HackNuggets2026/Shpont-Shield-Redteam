@@ -1,4 +1,4 @@
-import { BookOpen, Crosshair, Scale, FlaskConical, GitCompareArrows, LayoutDashboard, Moon, Network, RefreshCw, ShieldCheck, Siren, Sun, Swords, Wand2 } from "lucide-react"
+import { BookOpen, BrainCircuit, Crosshair, Scale, FlaskConical, GitCompareArrows, LayoutDashboard, Moon, Network, RefreshCw, ShieldCheck, Siren, Sun, Swords, Wand2 } from "lucide-react"
 import type { ReactNode } from "react"
 import { NavLink, useLocation } from "react-router-dom"
 
@@ -19,6 +19,7 @@ const NAV = [
   { to: "/traps", label: "Traps", icon: Siren },
   { to: "/referee", label: "Referee", icon: Scale },
   { to: "/reach", label: "Reach map", icon: Network },
+  { to: "/memory", label: "Memory guard", icon: BrainCircuit },
   { to: "/whatif", label: "What-if", icon: GitCompareArrows },
   { to: "/autopatch", label: "Autopatch", icon: Wand2 },
   { to: "/playground", label: "Playground", icon: FlaskConical },
@@ -31,6 +32,7 @@ const TITLE: Record<string, [string, string]> = {
   "/traps": ["Traps", "Fake secrets that expose whoever uses them"],
   "/playground": ["Playground", "Send your own message through the firewall"],
   "/referee": ["Referee", "The same test against every control layer the team built"],
+  "/memory": ["Memory guard", "What agents remember, where it came from, and what is held back"],
   "/reach": ["Reach map", "Who could move private data out if one instruction were planted"],
   "/whatif": ["What-if", "Preview a settings change before it reaches the live firewall"],
   "/autopatch": ["Autopatch", "Rules written from attacks that got through, proven before they are offered"],

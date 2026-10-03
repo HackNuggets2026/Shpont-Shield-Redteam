@@ -143,3 +143,15 @@ export const useRunReferee = () => {
   const qc = useQueryClient()
   return useMutation({ mutationFn: () => post<{ ok: boolean }>("/api/referee/run"), onSettled: () => qc.invalidateQueries({ queryKey: ["referee"] }) })
 }
+
+// ---- memory guard --------------------------------------------------------------------------
+
+export interface MemEntry { id: string; namespace: string; text: string; writer: string; source: string; trust: string; ts: number; status: string; reasons: string[]; recalls: number }
+export interface MemState { entries: MemEntry[]; stats: { total: number; quarantined: number; untrusted: number; namespaces: number }; events: { ts: number; kind: string; actor: string; entry: string | null; status: string | null }[] }
+export interface Recall { reader: string; query: string; entries: { id: string; namespace: string; source: string; trust: string; writer: string; as_given: string }[]; hidden_by_namespace: number }
+export interface SelfTestRow { name: string; ok: boolean; detail: string }
+export const useMemory = () => useQuery({ queryKey: ["memory"], queryFn: () => get<MemState>("/api/memory"), refetchInterval: 3000 })
+export const memoryWrite = (b: { namespace: string; writer: string; source: string; text: string }) => post<{ id: string; status: string; trust: string; reasons: string[] }>("/api/memory/write", b)
+export const memoryRecall = (b: { reader: string; query: string; shared: string[] }) => post<Recall>("/api/memory/recall", b)
+export const memorySelfTest = () => post<{ results: SelfTestRow[] }>("/api/memory/selftest")
+export const memoryRelease = (id: string) => post<{ ok: boolean }>("/api/memory/release", { id, by: "security console" })

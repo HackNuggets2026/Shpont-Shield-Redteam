@@ -42,6 +42,10 @@ flowchart LR
 
 The team built four control layers. The Referee fires the same corpus (trap drills excluded) at all of them and puts the results side by side: score, attacks stopped, normal requests blocked, disguised attacks stopped, latency, per attack class, the best gateway for each class, and attacks none of them stops. `demo/referee-up.sh` clones and starts the other three locally with their own demo policies (ports 8801-8803); the list lives under `referee.gateways` in `redteam.yaml`. Each runs offline (keyword or stand-in models), and the corpus was written against Shield, so read the numbers as a comparison of default demo setups, not of the products at their best. `GET /api/referee`, `POST /api/referee/run`.
 
+## Memory guard
+
+Long-term memory lets an agent be misled later by something it read once. `shield_redteam/memory/` is a memory API for agents that keeps where every entry came from: content from email, web pages or documents is checked by Shield before it is kept; an entry that tries to give orders, or a burst of near-identical entries, is quarantined until a person releases it; on recall, outside content comes back as labelled reference material, and an agent reads only its own namespace and the shared ones it is given. This covers memory poisoning, which the team's other repositories list as out of scope (OWASP LLM04 and LLM08). A six-scenario self-test runs against the live layer. `POST /api/memory/write`, `/api/memory/recall`, `/api/memory/release`, `/api/memory/selftest`, `GET /api/memory`.
+
 ## The dashboard
 
 `/` is a React app (`web/`: React, TypeScript, Tailwind, shadcn/ui, Recharts) with a left navigation, light and dark themes, and five sections. Every block is titled with the question it answers and is drawn from the live layer. The built bundle ships inside the Python package, so there is no Node at runtime.

@@ -20,6 +20,8 @@ from ..config import Config
 from ..core import yamlio
 from ..core.target import GatewayTarget, Target
 from ..core.types import DIRECTIONS, Case
+from ..memory.guard import MemoryGuard
+from ..memory.guard import self_test as memory_self_test
 from ..poligon import corpus
 from ..poligon.feedcheck import check_feed
 from ..poligon.service import Poligon
@@ -290,6 +292,45 @@ def create_app(cfg: Config, target: Target | None = None, background: bool = Tru
         d = target.guard(key, direction, theft_payload(decoy.value), "http_get")
         poll_alerts()
         return {"action": d.action, "stopped": d.stopped, "error": d.error}
+
+    # ---- memory guard: provenance-aware long-term memory for agents --------------------------
+
+    def inspect_text(text: str, direction: str) -> tuple[str, list[dict[str, Any]]]:
+        d = target.evaluate(Case("memory", "attack", "memory", text, direction=direction))
+        return d.action, d.findings
+
+    memory = MemoryGuard(inspect_text, cfg.resolve("data/memory.jsonl"))
+
+    @app.get("/api/memory")
+    def memory_state():
+        return memory.state()
+
+    @app.post("/api/memory/write")
+    def memory_write(body: JsonBody):
+        e = memory.write(
+            str(body.get("namespace") or body.get("writer") or "shared"),
+            str(body.get("text", "")),
+            str(body.get("writer", "agent")),
+            str(body.get("source", "self")),
+        )
+        return {"id": e.id, "status": e.status, "trust": e.trust, "reasons": e.reasons}
+
+    @app.post("/api/memory/recall")
+    def memory_recall(body: JsonBody):
+        return memory.recall(
+            str(body.get("reader", "agent")), str(body.get("query", "")), list(body.get("shared") or [])
+        )
+
+    @app.post("/api/memory/release")
+    def memory_release(body: JsonBody):
+        e = memory.release(str(body.get("id")), str(body.get("by", "security")))
+        if e is None:
+            raise HTTPException(404, "no quarantined entry with that id")
+        return {"ok": True}
+
+    @app.post("/api/memory/selftest")
+    def memory_selftest():
+        return {"results": memory_self_test(lambda: MemoryGuard(inspect_text))}
 
     # ---- referee: one corpus, every gateway of the team ----------------------------------
 

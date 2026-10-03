@@ -7,6 +7,7 @@ import { useLive } from "@/lib/api"
 import { About } from "@/pages/About"
 import { Attacks } from "@/pages/Attacks"
 import { Autopatch } from "@/pages/Autopatch"
+import { Memory } from "@/pages/Memory"
 import { Overview } from "@/pages/Overview"
 import { Playground } from "@/pages/Playground"
 import { Reach } from "@/pages/Reach"
@@ -39,6 +40,7 @@ export default function App() {
           <Route path="/playground" element={<Playground />} />
           <Route path="/referee" element={<Referee />} />
           <Route path="/reach" element={<Reach />} />
+          <Route path="/memory" element={<Memory />} />
           <Route path="/whatif" element={<WhatIf stage={stage} />} />
           <Route path="/autopatch" element={<Autopatch state={state} />} />
         </Routes>
