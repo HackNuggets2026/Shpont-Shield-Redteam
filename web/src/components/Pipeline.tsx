@@ -82,7 +82,8 @@ export function Pipeline({ stage, onToggle, pending }: { stage: Stage; onToggle:
   const label = { font: "500 11px var(--font-sans)" }
 
   return (
-    <div>
+    // The drawing scales with its width; capped so labels stay readable on wide screens.
+    <div className="mx-auto max-w-[1150px]">
       <style>{`@keyframes lane{0%{transform:translateX(0);opacity:0}8%{opacity:1}88%{opacity:1}100%{transform:translateX(var(--dx));opacity:0}}
         @media (prefers-reduced-motion:reduce){.lane-dots circle{animation:none!important;opacity:0}}`}</style>
       <svg viewBox={`0 0 ${W} ${H}`} className="w-full" role="img"

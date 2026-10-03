@@ -95,7 +95,7 @@ export function AppShell({ state, stage, children }: { state?: State; stage?: St
             </Button>
           </div>
         </header>
-        <main className="mx-auto max-w-[1400px] p-6">{children}</main>
+        <main className="p-6">{children}</main>
       </div>
     </div>
   )
