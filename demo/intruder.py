@@ -1,7 +1,7 @@
 """A scripted break-in against a control layer with decoys planted.
 
 Every step is something a compromised or curious agent does first: look for credentials,
-read what it can reach, and try to move the loot out. Run `shpont-probe serve` and the
+read what it can reach, and try to move the loot out. Run `shield-redteam serve` and the
 gateway (see README), then: python demo/intruder.py
 """
 
@@ -13,8 +13,8 @@ from pathlib import Path
 
 import httpx
 
-from shpont_probe.config import load
-from shpont_probe.tripwire.registry import Registry
+from shield_redteam.config import load
+from shield_redteam.tripwire.registry import Registry
 
 KEYS = {
     "alice": "dev-alice-key",
@@ -28,7 +28,7 @@ KEYS = {
 def main() -> None:
     ap = argparse.ArgumentParser()
     ap.add_argument("--gateway", default="http://127.0.0.1:8787")
-    ap.add_argument("--config", default=str(Path(__file__).parent.parent / "probe.yaml"))
+    ap.add_argument("--config", default=str(Path(__file__).parent.parent / "redteam.yaml"))
     args = ap.parse_args()
     reg = Registry.from_config(load(args.config).tripwire)
     val = {d.id: d.value for d in reg.decoys}

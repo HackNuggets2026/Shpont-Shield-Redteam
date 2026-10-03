@@ -1,10 +1,10 @@
-// Probe views for the Shield security console (see Shield's docs/console-contract.md):
+// Redteam views for the Shield security console (see Shield's docs/console-contract.md):
 // Self-test (overview), Safeguards, Traps, Try a message, Findings.
 (function () {
   "use strict";
   const ACL = window.ACL;
   const { h, charts: c } = ACL;
-  const API = window.PROBE_API || "";
+  const API = window.REDTEAM_API || "";
   const get = (p) => fetch(API + p).then((r) => r.json());
   const post = async (p, body) => {
     const r = await fetch(API + p, { method: "POST", headers: { "content-type": "application/json" }, body: JSON.stringify(body || {}) });
@@ -25,7 +25,7 @@
   const level = (f) => (f >= 0.9 ? GOOD : f >= 0.6 ? WARN : BAD);
   const view = (id) => ACL.href({ view: id });
   const more = (label, id) => `<div class="f6 mt-2">${h.link(label + " →", view(id))}</div>`;
-  const clip = (s) => `<div class="probe-clip color-fg-muted" title="${h.esc(s)}">${h.esc(s)}</div>`;
+  const clip = (s) => `<div class="rt-clip color-fg-muted" title="${h.esc(s)}">${h.esc(s)}</div>`;
   const ABOUT = {
     auth: "Valid key required", models: "Approved models only", tool_access: "Tools allowed per role",
     budget: "Request, token and cost limits", secrets: "Passwords and API keys", pii: "Cards, bank accounts, IDs",
@@ -54,7 +54,7 @@
     if (!ch) return h.empty("No settings change yet. Switch a safeguard off and the damage shows here.");
     const leaked = ch.opened.filter((o) => !o.technique).slice(0, 3);
     return h.note(`<b>${clock(ch.ts)} · score ${ch.posture_before} → ${ch.posture_after}</b>${ch.opened.length ? ` · ${ch.opened.length} attacks now get through` : ""}${ch.closed.length ? ` · ${ch.closed.length} stopped again` : ""}${ch.new_false_positives.length ? ` · ${ch.new_false_positives.length} normal blocked` : ""}
-      ${leaked.map((o) => `<div class="probe-quote">${h.esc(o.text)}</div>`).join("")}`, ch.opened.length ? "bad" : "ok").replace("mb-3", "mb-0");
+      ${leaked.map((o) => `<div class="rt-quote">${h.esc(o.text)}</div>`).join("")}`, ch.opened.length ? "bad" : "ok").replace("mb-3", "mb-0");
   }
 
   function feed(stage) {
@@ -67,7 +67,7 @@
         : (o.stopped ? h.badge("warn", "wrongly blocked") : h.badge("neutral", "normal, allowed"));
       rows.push(`<li>${b}<span title="${h.esc(o.text)}">${h.esc(o.text)}</span></li>`);
     }
-    return `<ul class="probe-feed">${rows.join("")}</ul>`;
+    return `<ul class="rt-feed">${rows.join("")}</ul>`;
   }
 
   function overview({ st, stage }) {
@@ -116,7 +116,7 @@
     });
     const bars = c.hbars(segs.filter((s) => (by[s.id]?.stop || 0) + (by[s.id]?.miss || 0)).map((s) => ({ label: cap(s.label), value: by[s.id].stop,
       color: s.state === "off" ? BAD : "var(--viz-1)", sub: by[s.id].miss ? `${by[s.id].miss} missed` : "" })), { fmt: (v) => String(v) });
-    const hint = stage.can_switch ? "" : h.note("Switches need <code>target.policy_file</code> in probe.yaml.", "warn");
+    const hint = stage.can_switch ? "" : h.note("Switches need <code>target.policy_file</code> in redteam.yaml.", "warn");
     return `${hint}<div class="acl-cols">
       <div class="acl-c8">${h.card("Safeguards, in the order they check a message", h.table(
         [{ label: "Safeguard" }, { label: "Kind" }, { label: "Switch" }, { label: "Stopped", num: true }, { label: "Missed", num: true }, { label: "Wrong blocks", num: true }], rows))}</div>
@@ -167,7 +167,7 @@
     const out = !v ? "" : v.stopped ? h.note(`<b>${v.action === "block" ? "Blocked" : "Redacted"}</b> by <b>${h.esc(cap(v.by))}</b> · ${v.ms} ms ${h.muted(h.esc(v.findings.join(", ")))}`, "ok")
       : h.note(`<b>Allowed</b> · ${v.ms} ms ${v.findings.length ? h.muted("noted: " + h.esc(v.findings.join(", "))) : ""}`, "warn");
     return `<div class="acl-cols"><div class="acl-c8">${h.card("Send your own message through Shield",
-      `<div class="probe-chips mb-2">${EXAMPLES.map((e, i) => h.button(e[0], `data-act="example" data-i="${i}"`)).join("")}</div>
+      `<div class="rt-chips mb-2">${EXAMPLES.map((e, i) => h.button(e[0], `data-act="example" data-i="${i}"`)).join("")}</div>
        <textarea class="form-control width-full input-monospace" rows="4" data-input="text" placeholder="Type a message">${h.esc(tryState.text)}</textarea>
        <div class="acl-tools mt-2 mb-3">
          <select class="form-select select-sm" data-act="dir" aria-label="Send as">${DIRS.map(([k, l]) => `<option value="${k}"${tryState.dir === k ? " selected" : ""}>${l}</option>`).join("")}</select>
@@ -200,7 +200,7 @@
 
   // ---- registration -------------------------------------------------------------------------------
 
-  const common = { tab: true, periodic: false, load, probe: true };
+  const common = { tab: true, periodic: false, load, redteam: true };
   ACL.register({ ...common, id: "selftest", title: "Self-test", order: 1, render: overview, actions: { run: () => post("/api/run") } });
   ACL.register({ ...common, id: "safeguards", title: "Safeguards", order: 2, render: safeguards,
     actions: { toggle: (el) => post("/api/control", { id: el.dataset.id, enabled: el.dataset.on === "1" }) } });
@@ -217,7 +217,7 @@
   // The shell refreshes every 15 s; a settings change should show within a few seconds.
   setInterval(() => {
     const a = document.activeElement;
-    if (document.hidden || !ACL.enabled || !ACL.currentView()?.probe || ACL.currentView().id === "try") return;
+    if (document.hidden || !ACL.enabled || !ACL.currentView()?.redteam || ACL.currentView().id === "try") return;
     if (a && /^(INPUT|SELECT|TEXTAREA)$/.test(a.tagName)) return;
     ACL.refresh();
   }, 2500);

@@ -2,8 +2,8 @@
 
 from __future__ import annotations
 
-from shpont_probe.core.types import Case, Decision, Outcome
-from shpont_probe.server.stage import locate, outcome_rows, place, rings, traffic_rows
+from shield_redteam.core.types import Case, Decision, Outcome
+from shield_redteam.server.stage import locate, outcome_rows, place, rings, traffic_rows
 
 
 def _control(name, kind="deterministic", enabled=True, mode="block", shadow=False):

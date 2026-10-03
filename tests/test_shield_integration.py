@@ -21,17 +21,17 @@ controllayer_app = pytest.importorskip("controllayer.gateway.app", reason="Shpon
 
 from fastapi.testclient import TestClient  # noqa: E402
 
-from shpont_probe.config import load  # noqa: E402
-from shpont_probe.core.target import GatewayTarget  # noqa: E402
-from shpont_probe.core.types import Case  # noqa: E402
-from shpont_probe.poligon import corpus  # noqa: E402
-from shpont_probe.poligon.runner import run  # noqa: E402
-from shpont_probe.poligon.score import impact, report  # noqa: E402
-from shpont_probe.tripwire.alerts import AlertStore  # noqa: E402
-from shpont_probe.tripwire.drills import drill_cases  # noqa: E402
-from shpont_probe.tripwire.feed import build_feed  # noqa: E402
-from shpont_probe.tripwire.plant import patch_policy  # noqa: E402
-from shpont_probe.tripwire.registry import Registry  # noqa: E402
+from shield_redteam.config import load  # noqa: E402
+from shield_redteam.core.target import GatewayTarget  # noqa: E402
+from shield_redteam.core.types import Case  # noqa: E402
+from shield_redteam.poligon import corpus  # noqa: E402
+from shield_redteam.poligon.runner import run  # noqa: E402
+from shield_redteam.poligon.score import impact, report  # noqa: E402
+from shield_redteam.tripwire.alerts import AlertStore  # noqa: E402
+from shield_redteam.tripwire.drills import drill_cases  # noqa: E402
+from shield_redteam.tripwire.feed import build_feed  # noqa: E402
+from shield_redteam.tripwire.plant import patch_policy  # noqa: E402
+from shield_redteam.tripwire.registry import Registry  # noqa: E402
 
 ROOT = Path(__file__).parent.parent
 pytestmark = pytest.mark.shield
@@ -42,7 +42,7 @@ def shield(tmp_path, monkeypatch):
     """A real control layer running the shipped policy with our decoys planted."""
     monkeypatch.setenv("ACL_SEMANTIC", "heuristic")
     monkeypatch.setenv("ACL_UPSTREAM", "mock")
-    cfg = load(ROOT / "probe.yaml")
+    cfg = load(ROOT / "redteam.yaml")
     registry = Registry.from_config(cfg.tripwire)
     base = json.loads((SHIELD / "feeds" / "signatures.json").read_text())
     (tmp_path / "feed.json").write_text(json.dumps(build_feed(base, registry)))

@@ -54,6 +54,6 @@ def build_feed(base: dict[str, Any] | None, registry: Registry) -> dict[str, Any
     digest = hashlib.sha256("".join(s["pattern"] for s in trip).encode()).hexdigest()[:8]
     return {
         "feed_version": f"{base.get('feed_version', '0')}+trip.{digest}",
-        "source": f"{base.get('source', 'local')} + shpont-probe tripwire ({len(trip)} decoys)",
+        "source": f"{base.get('source', 'local')} + shield-redteam tripwire ({len(trip)} decoys)",
         "signatures": sigs + trip,
     }

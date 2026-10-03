@@ -3,18 +3,18 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>Shpont Probe</title>
+<title>Shpont Shield Redteam</title>
 <link rel="stylesheet" href="/static/primer.css">
 <link rel="stylesheet" href="/static/console/core.css">
-<link rel="stylesheet" href="/static/console/probe.css">
+<link rel="stylesheet" href="/static/console/redteam.css">
 </head>
 <body class="color-bg-default color-fg-default">
 <div id="acl-root"></div>
 <script>
-  // The Shield console shell is opt-in behind ?ui=next; Probe always uses it.
+  // The Shield console shell is opt-in behind ?ui=next; Redteam always uses it.
   (function () { const u = new URL(location.href); if (u.searchParams.get("ui") !== "next") { u.searchParams.set("ui", "next"); history.replaceState(null, "", u); } })();
 </script>
 <script src="/static/console/app.js"></script>
-<script src="/static/console/views/probe.js"></script>
+<script src="/static/console/views/redteam.js"></script>
 </body>
 </html>

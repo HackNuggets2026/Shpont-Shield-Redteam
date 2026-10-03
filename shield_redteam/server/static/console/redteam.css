@@ -1,0 +1,8 @@
+/* The few things Redteam's views need beyond the Shield console styles. */
+.rt-score { font-size: 56px; font-weight: 600; line-height: 1; font-variant-numeric: tabular-nums; }
+.rt-feed { list-style: none; padding: 0; margin: 0; display: grid; gap: 6px; font-size: 12px; }
+.rt-feed li { display: grid; grid-template-columns: 118px minmax(0, 1fr); gap: 8px; align-items: center; }
+.rt-feed li > span:last-child { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.rt-quote { border-left: 3px solid var(--borderColor-danger-emphasis, #cf222e); padding: 1px 8px; margin: 4px 0; font-size: 12px; }
+.rt-clip { max-width: 520px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.rt-chips { display: flex; flex-wrap: wrap; gap: 6px; }

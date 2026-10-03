@@ -1,4 +1,4 @@
-"""shpont-probe: serve the dashboard, run the corpus once, or prepare a policy with decoys."""
+"""shield-redteam: serve the dashboard, run the corpus once, or prepare a policy with decoys."""
 
 from __future__ import annotations
 
@@ -113,8 +113,8 @@ def cmd_plant(args: argparse.Namespace) -> int:
 
 
 def main(argv: list[str] | None = None) -> int:
-    ap = argparse.ArgumentParser(prog="shpont-probe")
-    ap.add_argument("-c", "--config", default="probe.yaml")
+    ap = argparse.ArgumentParser(prog="shield-redteam")
+    ap.add_argument("-c", "--config", default="redteam.yaml")
     sub = ap.add_subparsers(dest="cmd", required=True)
     sub.add_parser("serve", help="dashboard, signature feed and continuous self-attack").set_defaults(fn=cmd_serve)
     r = sub.add_parser("run", help="fire the corpus once and print the posture")

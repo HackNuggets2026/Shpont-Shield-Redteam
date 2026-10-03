@@ -4,9 +4,9 @@ import re
 
 import pytest
 
-from shpont_probe.core.target import CallableTarget
-from shpont_probe.core.types import Case, Decision
-from shpont_probe.tripwire.registry import Registry
+from shield_redteam.core.target import CallableTarget
+from shield_redteam.core.types import Case, Decision
+from shield_redteam.tripwire.registry import Registry
 
 DECOYS = {
     "seed": "test-seed",

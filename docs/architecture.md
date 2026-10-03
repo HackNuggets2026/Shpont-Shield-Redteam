@@ -3,7 +3,7 @@
 ## Layout
 
 ```
-shpont_probe/
+shield_redteam/
   core/          shared by every module
     types.py     Case, Decision, Outcome, the enforcement ladder
     target.py    Target protocol; GatewayTarget (HTTP), CallableTarget (in-process)
@@ -11,8 +11,8 @@ shpont_probe/
     mutate.py    evasion rewrites
     feedcheck.py signature feed self-test
   tripwire/      tokens -> registry -> detector | feed | plant | drills | alerts
-  server/        FastAPI app, console views (static/console/views/probe.js), hands-on actions, Markdown report
-  config.py      probe.yaml
+  server/        FastAPI app, console views (static/console/views/redteam.js), hands-on actions, Markdown report
+  config.py      redteam.yaml
   cli.py         serve | run | feed | tokens | plant
 corpus/          attacks/*.yaml, benign/*.yaml
 tests/           unit tests on a fake layer + integration tests on the real Shield
@@ -30,10 +30,10 @@ Neither seam requires a change in Shield.
 
 | This repo | Lands in Shield as |
 |---|---|
-| `shpont_probe/poligon/` | `controllayer/poligon/`, with an in-process target |
-| `shpont_probe/tripwire/` | `controllayer/tripwire/`, registry configured under a `tripwire:` key in `policy.yaml` |
-| `probe.yaml` decoys | `policy.yaml` section, hot-reloaded with everything else |
-| `static/console/views/probe.js` | `controllayer/dashboard/views/probe.js`, five tabs in the security console |
+| `shield_redteam/poligon/` | `controllayer/poligon/`, with an in-process target |
+| `shield_redteam/tripwire/` | `controllayer/tripwire/`, registry configured under a `tripwire:` key in `policy.yaml` |
+| `redteam.yaml` decoys | `policy.yaml` section, hot-reloaded with everything else |
+| `static/console/views/redteam.js` | `controllayer/dashboard/views/redteam.js`, five tabs in the security console |
 | `corpus/` | `tests/corpus/`, run by `pytest` and by the live service |
 
 Two small requests to Shield that would remove the current limits: let `/admin/try` accept `tool` and `model`, and tag self-test events with their own channel.

@@ -1,4 +1,4 @@
-# Shpont Probe
+# Shpont Shield Redteam
 
 Two modules that sit next to an AI control layer and answer the two questions a message filter cannot:
 
@@ -11,7 +11,7 @@ Built against [Shpont-Shield](https://github.com/HackNuggets2026/Shpont-Shield) 
 
 ```mermaid
 flowchart LR
-  subgraph Probe[Shpont Probe :8799]
+  subgraph Redteam[Shpont Shield Redteam :8799]
     C[(corpus<br/>attacks + benign)] --> P[Poligon<br/>fire · score · diff]
     R[(decoy registry<br/>seeded honeytokens)] --> F[feed builder]
     R --> D[drills] --> P
@@ -34,7 +34,7 @@ flowchart LR
 
 ## The dashboard
 
-`/` runs inside the Shield security console shell (tabs, tiles, tables, SVG charts), so Probe looks and behaves like the rest of the console. Probe's part is one file, `shpont_probe/server/static/console/views/probe.js`, written against Shield's `docs/console-contract.md`.
+`/` runs inside the Shield security console shell (tabs, tiles, tables, SVG charts), so Redteam looks and behaves like the rest of the console. Redteam's part is one file, `shield_redteam/server/static/console/views/redteam.js`, written against Shield's `docs/console-contract.md`.
 
 | Tab | Shows |
 |---|---|
@@ -44,9 +44,9 @@ flowchart LR
 | **Try a message** | send any text through the live layer and see which safeguard reacts |
 | **Findings** | attacks that get through, normal requests blocked by mistake, disguised attacks that pass, feed check, report |
 
-To merge into Shield: copy `views/probe.js` into `controllayer/dashboard/views/`, add its script tag to `panel.html`, set `window.PROBE_API` to the Probe service. See `shpont_probe/server/static/console/README.md`.
+To merge into Shield: copy `views/redteam.js` into `controllayer/dashboard/views/`, add its script tag to `panel.html`, set `window.REDTEAM_API` to the Redteam service. See `shield_redteam/server/static/console/README.md`.
 
-The switches need `target.policy_file` in `probe.yaml` (set by `demo/up.sh`); the theft button needs `target.demo_agent_key`.
+The switches need `target.policy_file` in `redteam.yaml` (set by `demo/up.sh`); the theft button needs `target.demo_agent_key`.
 
 ## Quick start
 
@@ -57,7 +57,7 @@ python -m venv .venv && .venv/bin/pip install -e '.[dev]'
 # Shield checked out next to this repo, with its own .venv (see its README):
 demo/up.sh                          # starts both, decoys planted
 .venv/bin/python demo/intruder.py   # a scripted break-in: 6 of 7 steps stopped, 1 passes by design
-.venv/bin/shpont-probe run          # one corpus run in the terminal; --min-posture 85 for CI
+.venv/bin/shield-redteam run          # one corpus run in the terminal; --min-posture 85 for CI
 ```
 
 Open http://127.0.0.1:8799/, then edit `.run/policy.yaml` (set a control's `mode: log`, raise a threshold, delete a signature from the feed). The score and the "What the last settings change did" card update within about three seconds.
@@ -74,7 +74,7 @@ Open http://127.0.0.1:8799/, then edit `.run/policy.yaml` (set a control's `mode
 - **Corpus** (`corpus/`): YAML, one file per attack class. `attacks/` must be stopped, `benign/` must pass. `benign/hard.yaml` holds legitimate requests that use security vocabulary, which is where over-eager guardrails show. Add a case by adding three lines.
 - **Mutators** (`poligon/mutate.py`): upper-case, leetspeak, homoglyphs, zero-width characters, letter spacing, base64 wrapping, role-play framing. Classes whose payload a rewrite would destroy (keys, card numbers, exploit strings) are marked `mutable: false`.
 - **Impact of a change**: every re-run is compared with the previous one case by case. The log names the attacks that opened or closed, the false positives that appeared or went away, and which part of the configuration changed (policy, feed, controls, semantic backend, insider-risk levels).
-- **Feed self-test**: a signature may carry `tests: {match: [...], clean: [...]}`. One that does not compile, misses its own example or fires on clean text is reported as broken (`shpont-probe feed --check`).
+- **Feed self-test**: a signature may carry `tests: {match: [...], clean: [...]}`. One that does not compile, misses its own example or fires on clean text is reported as broken (`shield-redteam feed --check`).
 
 Self-test traffic goes through the gateway's `/admin/try`, which runs the full pipeline but spends no budget and adds no insider-risk points.
 
@@ -91,14 +91,14 @@ Honeytokens are derived from a seed with HMAC (`tripwire/tokens.py`): the same s
 Alerts come from the control layer's own audit trail, so they carry principal, team, role, channel, direction and tool. Trips caused by Poligon's drills are counted separately and never raise an incident.
 
 ```bash
-.venv/bin/shpont-probe tokens            # what is planted, values masked
-.venv/bin/shpont-probe tokens --reveal   # full values, e.g. to paste the canary into a system prompt
-.venv/bin/shpont-probe plant --policy ../Shpont-Shield/policy.yaml --out .run/policy.yaml
+.venv/bin/shield-redteam tokens            # what is planted, values masked
+.venv/bin/shield-redteam tokens --reveal   # full values, e.g. to paste the canary into a system prompt
+.venv/bin/shield-redteam plant --policy ../Shpont-Shield/policy.yaml --out .run/policy.yaml
 ```
 
 ## Configuration
 
-Everything is in [`probe.yaml`](probe.yaml): the target, the corpus, the decoys and where each one is planted.
+Everything is in [`redteam.yaml`](redteam.yaml): the target, the corpus, the decoys and where each one is planted.
 
 ## Endpoints
 

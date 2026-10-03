@@ -1,6 +1,6 @@
 # Findings on Shpont-Shield (shipped policy, heuristic semantic backend)
 
-Measured by `shpont-probe run` on 2026-10-03. The heuristic backend is a keyword stand-in for the decision models, so the semantic findings below describe the stand-in, not tev1 or nimble.
+Measured by `shield-redteam run` on 2026-10-03. The heuristic backend is a keyword stand-in for the decision models, so the semantic findings below describe the stand-in, not tev1 or nimble.
 
 ## Attacks that pass
 

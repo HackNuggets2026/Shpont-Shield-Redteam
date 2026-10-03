@@ -7,14 +7,14 @@ import re
 
 import pytest
 
-from shpont_probe.poligon.feedcheck import check_feed
-from shpont_probe.tripwire.alerts import AlertStore
-from shpont_probe.tripwire.detector import Detector
-from shpont_probe.tripwire.drills import drill_cases
-from shpont_probe.tripwire.feed import build_feed, signature
-from shpont_probe.tripwire.plant import patch_policy
-from shpont_probe.tripwire.registry import Registry
-from shpont_probe.tripwire.tokens import KINDS, mint
+from shield_redteam.poligon.feedcheck import check_feed
+from shield_redteam.tripwire.alerts import AlertStore
+from shield_redteam.tripwire.detector import Detector
+from shield_redteam.tripwire.drills import drill_cases
+from shield_redteam.tripwire.feed import build_feed, signature
+from shield_redteam.tripwire.plant import patch_policy
+from shield_redteam.tripwire.registry import Registry
+from shield_redteam.tripwire.tokens import KINDS, mint
 from tests.conftest import DECOYS
 
 # --- honeytokens -------------------------------------------------------------------
@@ -197,8 +197,8 @@ def test_patch_policy_adds_trap_resource_and_marker_without_touching_the_origina
         {"id": "ghost", "plant": {"resource": "crm", "path": "GET /accounts", "body": '[{"name": "{value}"}]'}},
         {"id": "prompt", "plant": {"resource": "missing", "path": "GET /", "body": "{value}"}},
     ]
-    out, notes = patch_policy(policy, registry, cfg, "http://probe/feed.json")
-    assert out["signatures"] == {"mode": "block", "feed": "http://probe/feed.json", "refresh_seconds": 2}
+    out, notes = patch_policy(policy, registry, cfg, "http://redteam/feed.json")
+    assert out["signatures"] == {"mode": "block", "feed": "http://redteam/feed.json", "refresh_seconds": 2}
     assert registry.get("vault").value in out["resources"]["vault-root"]["connection"]["mock_default"]
     assert registry.get("ghost").value in out["resources"]["crm"]["connection"]["mock_responses"]["GET /accounts"]
     assert any("SKIPPED" in n for n in notes)
@@ -216,8 +216,8 @@ def test_drills_cover_every_decoy_and_are_caught_by_the_detector(registry):
 def test_patch_policy_leaves_service_backed_resources_alone(registry):
     policy = {"signatures": {}, "resources": {"crm": {"type": "service", "connection": {"service": "crm"}}}}
     cfg = [{"id": "ghost", "plant": {"resource": "crm", "path": "GET /accounts", "body": "{value}"}}]
-    out, notes = patch_policy(policy, registry, cfg, "http://probe/feed.json")
-    assert out["resources"] == policy["resources"] and out["signatures"]["feed"] == "http://probe/feed.json"
+    out, notes = patch_policy(policy, registry, cfg, "http://redteam/feed.json")
+    assert out["resources"] == policy["resources"] and out["signatures"]["feed"] == "http://redteam/feed.json"
     assert any("SKIPPED planting ghost" in n for n in notes)
 
 

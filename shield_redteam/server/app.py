@@ -1,4 +1,4 @@
-"""The Probe service: runs Poligon and Tripwire next to a control layer and reports on both."""
+"""The Redteam service: runs Poligon and Tripwire next to a control layer and reports on both."""
 
 from __future__ import annotations
 
@@ -83,7 +83,7 @@ def create_app(cfg: Config, target: Target | None = None, background: bool = Tru
         yield
         stop.set()
 
-    app = FastAPI(title="Shpont Probe", lifespan=lifespan)
+    app = FastAPI(title="Shpont Shield Redteam", lifespan=lifespan)
     app.state.poligon, app.state.alerts, app.state.registry = poligon, alerts, registry
     app.mount("/static", StaticFiles(directory=STATIC), name="static")
 
@@ -118,7 +118,7 @@ def create_app(cfg: Config, target: Target | None = None, background: bool = Tru
 
     @app.get("/admin/summary")
     def shield_summary():
-        """What the console shell needs for its header. Standalone, Probe relays it from the control layer."""
+        """What the console shell needs for its header. Standalone, Redteam relays it from the control layer."""
         try:
             info = target.describe()
         except Exception:  # noqa: BLE001
@@ -192,7 +192,9 @@ def create_app(cfg: Config, target: Target | None = None, background: bool = Tru
         """Switch one safeguard on or off in the control layer's policy file, then re-test at once."""
         body = await request.json()
         if not policy_file:
-            return JSONResponse({"error": "set target.policy_file in probe.yaml to use the switches"}, status_code=409)
+            return JSONResponse(
+                {"error": "set target.policy_file in redteam.yaml to use the switches"}, status_code=409
+            )
         try:
             set_enabled(policy_file, str(body.get("id")), bool(body.get("enabled")))
         except NotSwitchable as e:

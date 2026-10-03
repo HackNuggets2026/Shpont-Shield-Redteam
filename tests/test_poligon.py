@@ -6,12 +6,12 @@ from pathlib import Path
 
 import pytest
 
-from shpont_probe.poligon import corpus
-from shpont_probe.poligon.feedcheck import check_feed
-from shpont_probe.poligon.mutate import MUTATORS, mutants
-from shpont_probe.poligon.runner import run
-from shpont_probe.poligon.score import impact, report
-from shpont_probe.poligon.service import Poligon
+from shield_redteam.poligon import corpus
+from shield_redteam.poligon.feedcheck import check_feed
+from shield_redteam.poligon.mutate import MUTATORS, mutants
+from shield_redteam.poligon.runner import run
+from shield_redteam.poligon.score import impact, report
+from shield_redteam.poligon.service import Poligon
 
 ROOT = Path(__file__).parent.parent
 
@@ -51,8 +51,8 @@ def test_breakdown_by_owasp(layer, cases):
 
 
 def test_target_error_is_never_counted_as_a_pass(cases):
-    from shpont_probe.core.target import CallableTarget
-    from shpont_probe.core.types import Decision
+    from shield_redteam.core.target import CallableTarget
+    from shield_redteam.core.types import Decision
 
     down = CallableTarget(lambda c: Decision("error", error="connection refused"))
     rep = report(run(down, cases))
@@ -113,8 +113,8 @@ def test_service_reruns_on_config_change_and_logs_it(layer, cases):
 
 
 def test_service_survives_unreachable_target(cases):
-    from shpont_probe.core.target import CallableTarget
-    from shpont_probe.core.types import Decision
+    from shield_redteam.core.target import CallableTarget
+    from shield_redteam.core.types import Decision
 
     def boom() -> str:
         raise ConnectionError("refused")
@@ -168,7 +168,7 @@ def test_feedcheck_passes_good_signature_and_flags_broken_ones():
 
 
 def test_impact_names_the_cause_of_a_change():
-    from shpont_probe.poligon.score import _cause
+    from shield_redteam.poligon.score import _cause
 
     old = "policy=aaa|feed=1|risk_levels=all normal"
     assert _cause(old, "policy=bbb|feed=1|risk_levels=all normal") == ["policy"]
@@ -182,7 +182,7 @@ def test_impact_names_the_cause_of_a_change():
 def test_switching_a_control_edits_only_that_flag(tmp_path):
     import yaml
 
-    from shpont_probe.server.demo import NotSwitchable, set_enabled, switchable
+    from shield_redteam.server.demo import NotSwitchable, set_enabled, switchable
 
     f = tmp_path / "policy.yaml"
     f.write_text(
