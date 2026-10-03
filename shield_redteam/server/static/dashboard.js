@@ -42,10 +42,16 @@
     });
     const miss = r.attacks.total - r.attacks.stopped;
     html("verdict", miss ? `<b>${miss} of ${r.attacks.total}</b> known attacks still get through.` : `All <b>${r.attacks.total}</b> known attacks are stopped.`);
-    html("minis", `<div><b>${r.attacks.stopped}/${r.attacks.total}</b><span>attacks stopped</span></div>
-      <div><b>${r.benign.stopped}/${r.benign.total}</b><span>normal requests blocked</span></div>
-      <div><b>${r.latency_ms.p95} ms</b><span>delay per message</span></div>`);
-    html("how-n", `${st.poligon.corpus.attacks} attacks and ${st.poligon.corpus.benign} normal requests`);
+    const off = segs().filter((x) => x.state === "off").length, tw = st.tripwire;
+    html("kpis", `<div class="kpi ${r.posture >= 90 ? "good" : r.posture >= 70 ? "warn" : "bad"}"><b>${r.posture}</b><span>score / 100</span></div>
+      <div class="kpi"><b>${r.attacks.stopped}/${r.attacks.total}</b><span>attacks stopped</span></div>
+      <div class="kpi ${r.benign.stopped ? "warn" : ""}"><b>${r.benign.stopped}/${r.benign.total}</b><span>normal blocked</span></div>
+      <div class="kpi"><b>${r.latency_ms.p95} ms</b><span>delay per message</span></div>
+      <div class="kpi ${tw.incidents ? "bad" : "good"}"><b>${tw.incidents}</b><span>trap incidents</span></div>`);
+    $("n-off").textContent = off ? off + " off" : "";
+    $("n-open").textContent = miss || "";
+    $("n-inc").textContent = tw.incidents || "";
+    html("how-n", `${st.poligon.corpus.attacks + st.poligon.corpus.benign} messages`);
   }
 
   // ---- flow: source -> safeguard -> outcome ---------------------------------------------------
@@ -83,13 +89,31 @@
   }
   charts.flow.on("click", (p) => { if (p.dataType === "node" && p.data.seg) toggle(p.data.seg, false); });
 
+  const ABOUT = {
+    auth: "Valid key required", models: "Approved models only", tool_access: "Tools allowed per role",
+    budget: "Request, token and cost limits", secrets: "Passwords and API keys", pii: "Cards, bank accounts, IDs",
+    signatures: "Known attack patterns and the traps", pii_model: "Names and addresses", prompt_injection: "Attempts to take over the AI",
+    data_exfiltration: "Sending data outside", confidential_output: "Confidential info in replies",
+    harmful_request: "Malware, weapons, harassment", off_policy_use: "Non-work use, trial mode",
+  };
+
   function switches() {
-    const chips = segs().map((s) => {
-      const off = s.state === "off", cls = off ? "off" : s.state === "shadow" || s.state === "monitor" ? "trial" : "";
-      if (!s.switchable) return `<span class="chip fixed ${cls}" title="No switch in the policy"><i></i>${esc(cap(s.label))}</span>`;
-      return `<button class="chip ${cls}" data-seg="${esc(s.id)}" data-on="${off ? 1 : 0}" ${busy[s.id] ? "disabled" : ""} title="${off ? "Switch back on" : "Switch off"}"><i></i>${esc(cap(s.label))}</button>`;
-    }).join("");
-    html("switches", chips);
+    const by = {};
+    for (const o of stage.outcomes) {
+      if (o.rewrite) continue;
+      const t = by[o.seg] || (by[o.seg] = { stop: 0, miss: 0, wrong: 0 });
+      if (o.attack) o.stopped ? t.stop++ : t.miss++; else if (o.stopped) t.wrong++;
+    }
+    let n = 0;
+    const rows = stage.rings.flatMap((ring) => ring.segments.map((s) => {
+      const t = by[s.id] || { stop: 0, miss: 0, wrong: 0 }, off = s.state === "off";
+      const sw = s.switchable ? `<button class="sw ${off ? "off" : ""}" data-seg="${esc(s.id)}" data-on="${off ? 1 : 0}" ${busy[s.id] ? "disabled" : ""} aria-pressed="${!off}">${off ? "OFF" : "ON"}</button>`
+        : `<button class="sw" disabled title="No switch in the policy">ON</button>`;
+      const mode = s.state === "monitor" ? ` <span class="tag warn">log only</span>` : s.state === "shadow" ? ` <span class="tag plain">trial</span>` : "";
+      return `<tr class="${off ? "off" : ""}"><td class="n sub">${++n}</td><td><b>${esc(cap(s.label))}</b>${mode}<div class="sub">${esc(ABOUT[s.id] || "")}</div></td><td class="sub">${esc(ring.label)}</td>
+        <td>${sw}</td><td class="n">${t.stop}</td><td class="n">${t.miss ? `<b style="color:var(--bad)">${t.miss}</b>` : 0}</td><td class="n">${t.wrong ? `<b style="color:var(--warn)">${t.wrong}</b>` : 0}</td></tr>`;
+    }));
+    html("guard-table", `<thead><tr><th class="n">#</th><th>Safeguard</th><th>Kind</th><th>Switch</th><th class="n">Attacks stopped</th><th class="n">Attacks missed</th><th class="n">Wrong blocks</th></tr></thead><tbody>${rows.join("")}</tbody>`);
   }
 
   async function toggle(id, on) {
@@ -100,7 +124,7 @@
     if (r.error) banner(r.error);
     load();
   }
-  $("switches").addEventListener("click", (e) => { const b = e.target.closest("button[data-seg]"); if (b) toggle(b.dataset.seg, b.dataset.on === "1"); });
+  $("guard-table").addEventListener("click", (e) => { const b = e.target.closest("button[data-seg]"); if (b) toggle(b.dataset.seg, b.dataset.on === "1"); });
 
   // ---- timeline ----------------------------------------------------------------------------------
 
@@ -124,11 +148,21 @@
           tooltip: { formatter: (p) => `${esc(p.name)}<br>score ${p.value}` } } }],
     }, true);
     const c = changes[0];
-    if (!c) { html("change", `<div class="change idle">No change yet. Switch a safeguard off above and the damage shows here.</div>`); return; }
+    if (!c) { for (const id of ["change", "change2"]) html(id, `<div class="change idle">No change yet. Switch a safeguard off and the damage shows here.</div>`); return; }
     const what = (c.controls || []).map((k) => `<b>${esc(label(k.id))}</b> ${esc(k.what)}`).join(", ") || esc(cap((c.cause || []).join(", "))) + " changed";
     const quote = c.opened.find((o) => !o.technique);
-    html("change", `<div class="change ${c.opened.length ? "bad" : "good"}">${clock(c.ts)} · ${what} · score ${c.posture_before} → <b>${c.posture_after}</b>${c.opened.length ? ` · ${c.opened.length} attacks now get through` : ""}${c.closed.length ? ` · ${c.closed.length} stopped again` : ""}${c.new_false_positives.length ? ` · ${c.new_false_positives.length} normal request(s) newly blocked` : ""}
-      ${quote ? `<q title="${esc(quote.text)}">now passes: ${esc(quote.text)}</q>` : ""}</div>`);
+    const box = `<div class="change ${c.opened.length ? "bad" : "good"}">${clock(c.ts)} · ${what} · score ${c.posture_before} → <b>${c.posture_after}</b>${c.opened.length ? ` · ${c.opened.length} attacks now get through` : ""}${c.closed.length ? ` · ${c.closed.length} stopped again` : ""}${c.new_false_positives.length ? ` · ${c.new_false_positives.length} normal request(s) newly blocked` : ""}
+      ${quote ? `<q title="${esc(quote.text)}">now passes: ${esc(quote.text)}</q>` : ""}</div>`;
+    html("change", box); html("change2", box);
+  }
+
+  function lists() {
+    const r = st.poligon.report; if (!r) return;
+    const row = (o, tag) => `<tr><td class="mono">${esc(o.id)}</td><td>${tag}</td><td class="sub">${esc(CHANNEL[o.direction] || o.direction)}</td><td><div class="clip" title="${esc(o.text)}">${esc(o.text)}</div></td></tr>`;
+    html("open-table", r.open_attacks.length ? `<thead><tr><th>Test</th><th>Type</th><th>Sent as</th><th>Text</th></tr></thead><tbody>${r.open_attacks.map((o) => row(o, `<span class="tag bad">${esc(words(o.category))}</span>`)).join("")}</tbody>`
+      : `<tbody><tr><td class="sub">Every known attack is stopped.</td></tr></tbody>`);
+    html("fp-table", r.false_positives.length ? `<thead><tr><th>Test</th><th>Blocked by</th><th>Sent as</th><th>Text</th></tr></thead><tbody>${r.false_positives.map((o) => row(o, `<span class="tag warn">${esc(o.caught_by.map((x) => label(x.split("/")[0])).join(", ") || o.action)}</span>`)).join("")}</tbody>`
+      : `<tbody><tr><td class="sub">None.</td></tr></tbody>`);
   }
 
   // ---- disguises and holes ------------------------------------------------------------------------
@@ -172,7 +206,7 @@
         ${hits.length ? `<span class="tag bad">${esc(hits[0].principal)} · ${hits.length}x</span>` : `<span class="tag good">untouched</span>`}
         ${stage.can_steal ? `<button class="btn" data-steal="${esc(d.id)}" ${busy["t" + d.id] ? "disabled" : ""}>Simulate theft</button>` : "<span></span>"}</li>`;
     }).join(""));
-    html("incidents", tw.alerts.slice(0, 5).map((a) => `<li><span>${clock(a.ts)}</span><b>${esc(a.principal)}</b><span>used "${esc(a.label)}" via ${esc(words(a.direction))}${a.tool ? " · " + esc(a.tool) : ""}: ${a.action === "block" ? "blocked" : esc(a.action)}</span></li>`).join(""));
+    html("incidents", !tw.alerts.length ? `<li class="empty">Nobody yet. Press "Simulate theft".</li>` : tw.alerts.slice(0, 14).map((a) => `<li><span>${clock(a.ts)}</span><b>${esc(a.principal)}</b><span>used "${esc(a.label)}" via ${esc(words(a.direction))}${a.tool ? " · " + esc(a.tool) : ""}: ${a.action === "block" ? "blocked" : esc(a.action)}</span></li>`).join(""));
   }
   $("traps").addEventListener("click", async (e) => {
     const b = e.target.closest("button[data-steal]"); if (!b) return;
@@ -204,11 +238,14 @@
   ];
   $("examples").innerHTML = EXAMPLES.map((e, i) => `<button class="chip" data-ex="${i}">${esc(e[0])}</button>`).join("");
   $("examples").addEventListener("click", (e) => { const b = e.target.closest("[data-ex]"); if (!b) return; const ex = EXAMPLES[+b.dataset.ex]; $("try-text").value = ex[1]; $("try-dir").value = ex[2]; send(); });
+  let tried = [];
   async function send() {
     const text = $("try-text").value.trim(); if (!text) return;
     $("try-send").disabled = true;
     const v = await post("/api/try", { text, direction: $("try-dir").value });
     $("try-send").disabled = false;
+    if (!v.error) { tried.unshift({ text, v }); tried = tried.slice(0, 8); }
+    $("try-history").innerHTML = tried.slice(1).map((t) => `<li><span class="tag ${t.v.stopped ? "good" : "warn"}">${t.v.stopped ? "stopped: " + esc(cap(t.v.by)) : "allowed"}</span><span title="${esc(t.text)}">${esc(t.text)}</span></li>`).join("");
     $("try-out").innerHTML = v.error ? `<div class="result bad">${esc(v.error)}</div>`
       : v.stopped ? `<div class="result good"><b>${v.action === "block" ? "Blocked" : "Sensitive part removed"}</b> by <b>${esc(cap(v.by))}</b> in ${v.ms} ms</div>`
       : `<div class="result warn"><b>Allowed.</b> No safeguard reacted (${v.ms} ms).</div>`;
@@ -223,9 +260,9 @@
   function render() {
     const t = st.target || {}, down = t.error || st.poligon.error;
     $("status").className = "status" + (down ? " off" : "");
-    $("status").lastElementChild.textContent = down ? "Shield unreachable" : `testing ${t.name} · run ${st.poligon.runs}`;
+    $("status").lastElementChild.textContent = down ? "Shield unreachable" : `${t.name} · run ${st.poligon.runs}`;
     if (t.policy?.last_error) banner("Shield rejected the last policy edit and kept the previous one: " + t.policy.last_error);
-    score(); flow(); switches(); timeline(); radar(); heat(); traps();
+    score(); flow(); switches(); timeline(); radar(); heat(); traps(); lists();
   }
 
   async function load() {
@@ -237,6 +274,17 @@
     }
   }
   $("retest").addEventListener("click", async () => { $("retest").disabled = true; await post("/api/run"); $("retest").disabled = false; load(); });
+
+  const TITLES = { overview: "Overview", safeguards: "Safeguards", attacks: "Attacks", traps: "Traps", try: "Try a message" };
+  function route() {
+    const page = TITLES[location.hash.slice(1)] ? location.hash.slice(1) : "overview";
+    document.querySelectorAll(".page").forEach((el) => { el.hidden = el.dataset.page !== page; });
+    document.querySelectorAll("[data-nav]").forEach((a) => { if (a.dataset.nav === page) a.setAttribute("aria-current", "page"); else a.removeAttribute("aria-current"); });
+    $("title").textContent = TITLES[page];
+    Object.values(charts).forEach((c) => c.resize()); // a chart drawn while its page was hidden has no size yet
+  }
+  addEventListener("hashchange", route);
+  route();
 
   load();
   setInterval(load, 2000);

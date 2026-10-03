@@ -7,67 +7,68 @@
 <link rel="stylesheet" href="/static/dashboard.css">
 </head>
 <body>
-<header class="top">
-  <div class="brand"><span class="logo" aria-hidden="true"></span><b>Shpont Shield</b><span>Redteam</span></div>
-  <ol class="how" aria-label="How it works">
-    <li><i>1</i>Fire <b id="how-n">attacks and normal requests</b> at Shield</li>
-    <li><i>2</i>Safeguards react</li>
-    <li><i>3</i>Score what got through</li>
-  </ol>
-  <div class="top-actions">
+<aside class="side">
+  <div class="brand"><span class="logo" aria-hidden="true"></span><div><b>Shpont Shield</b><span>Redteam</span></div></div>
+  <nav aria-label="Sections">
+    <a href="#overview" data-nav="overview"><svg viewBox="0 0 16 16"><path d="M2 2h5v6H2zM9 2h5v3H9zM9 7h5v7H9zM2 10h5v4H2z"/></svg>Overview</a>
+    <a href="#safeguards" data-nav="safeguards"><svg viewBox="0 0 16 16"><path d="M8 1l6 2v5c0 3.5-2.5 6-6 7-3.5-1-6-3.5-6-7V3z"/></svg>Safeguards<em id="n-off"></em></a>
+    <a href="#attacks" data-nav="attacks"><svg viewBox="0 0 16 16"><path d="M8 1l2 5h5l-4 3 1.5 5L8 11l-4.5 3L5 9 1 6h5z"/></svg>Attacks<em id="n-open"></em></a>
+    <a href="#traps" data-nav="traps"><svg viewBox="0 0 16 16"><path d="M2 13h12v2H2zM3 12a5 5 0 0110 0zM7 3h2v3H7z"/></svg>Traps<em id="n-inc"></em></a>
+    <a href="#try" data-nav="try"><svg viewBox="0 0 16 16"><path d="M1 2l14 6-14 6 3-6zM4 8h6"/></svg>Try a message</a>
+  </nav>
+  <div class="side-foot">
+    <ol class="how" aria-label="How it works">
+      <li><i>1</i><span>Fire <b id="how-n">test messages</b> at Shield</span></li>
+      <li><i>2</i><span>Safeguards react</span></li>
+      <li><i>3</i><span>Score what got through</span></li>
+    </ol>
+    <button class="btn primary wide" id="retest">Re-test now</button>
     <span class="status" id="status"><i></i><span>connecting</span></span>
-    <button class="btn primary" id="retest">Re-test now</button>
-    <a class="btn" href="/console">Console view</a>
+    <a class="quiet" href="/console">Console view</a>
   </div>
-</header>
-<div class="banner" id="banner" hidden></div>
-<main class="grid">
-  <section class="card c4" aria-labelledby="t-score">
-    <h2 id="t-score">How safe is it right now?</h2>
-    <div class="chart" id="gauge" style="height:250px"></div>
-    <p class="verdict" id="verdict"></p>
-    <div class="minis" id="minis"></div>
-  </section>
-  <section class="card c8" aria-labelledby="t-flow">
-    <div class="head"><h2 id="t-flow">What happens to every test message?</h2><span class="hint">Click a safeguard below to switch it off in the real policy and watch the flow change</span></div>
-    <div class="chart" id="flow" style="height:340px"></div>
-    <div class="chips" id="switches"></div>
-  </section>
-  <section class="card c8" aria-labelledby="t-time">
-    <h2 id="t-time">Did a settings change break anything?</h2>
-    <div class="chart" id="timeline" style="height:210px"></div>
-    <div id="change"></div>
-  </section>
-  <section class="card c4" aria-labelledby="t-radar">
-    <h2 id="t-radar">Can an attacker disguise it?</h2>
-    <div class="chart" id="radar" style="height:250px"></div>
-    <p class="note">The same attacks, rewritten: in capitals, with look-alike letters, encoded. Share still stopped.</p>
-  </section>
-  <section class="card c7" aria-labelledby="t-heat">
-    <h2 id="t-heat">Where are the holes?</h2>
-    <div class="chart" id="heat" style="height:290px"></div>
-    <p class="note">Attack type by the channel it arrives on. Each cell: attacks stopped of attacks sent.</p>
-  </section>
-  <section class="card c5" aria-labelledby="t-traps">
-    <div class="head"><h2 id="t-traps">Who took the bait?</h2><span class="hint">Fake secrets nobody honest uses</span></div>
-    <ul class="traps" id="traps"></ul>
-    <ul class="incidents" id="incidents"></ul>
-  </section>
-  <section class="card c7" aria-labelledby="t-try">
-    <h2 id="t-try">Try to get something past it</h2>
-    <div class="chips" id="examples"></div>
-    <div class="tryrow">
-      <input id="try-text" type="text" placeholder="Type any message" aria-label="Message">
-      <select id="try-dir" aria-label="Send as"><option value="input">as a prompt</option><option value="output">as a model reply</option><option value="tool_call">as a tool call</option><option value="tool_result">as tool data</option></select>
-      <button class="btn primary" id="try-send">Send</button>
-    </div>
-    <div id="try-out"></div>
-  </section>
-  <section class="card c5" aria-labelledby="t-live">
-    <h2 id="t-live">Live test messages</h2>
-    <ul class="feed" id="feed"></ul>
-  </section>
-</main>
+</aside>
+<div class="main">
+  <header class="top"><h1 id="title">Overview</h1><div class="kpis" id="kpis"></div></header>
+  <div class="banner" id="banner" hidden></div>
+
+  <main class="grid page" data-page="overview">
+    <section class="card c4"><h2>How safe is it right now?</h2><div class="chart" id="gauge" style="height:240px"></div><p class="verdict" id="verdict"></p></section>
+    <section class="card c8"><div class="head"><h2>What happens to every test message?</h2><span class="hint">Click a safeguard to switch it off and watch the flow change</span></div>
+      <div class="chart" id="flow" style="height:330px"></div></section>
+    <section class="card c8"><h2>Did a settings change break anything?</h2><div class="chart" id="timeline" style="height:210px"></div><div id="change"></div></section>
+    <section class="card c4"><h2>Live test messages</h2><ul class="feed" id="feed"></ul></section>
+  </main>
+
+  <main class="grid page" data-page="safeguards" hidden>
+    <section class="card c12"><div class="head"><h2>Every safeguard, in the order it checks a message</h2><span class="hint">The switch edits Shield's real policy file; the test repeats at once</span></div>
+      <div class="scroll"><table class="tbl" id="guard-table"></table></div></section>
+    <section class="card c12"><h2>Last change</h2><div id="change2"></div></section>
+  </main>
+
+  <main class="grid page" data-page="attacks" hidden>
+    <section class="card c7"><h2>Where are the holes?</h2><div class="chart" id="heat" style="height:300px"></div><p class="note">Attack type by the channel it arrives on. Each cell: stopped of sent.</p></section>
+    <section class="card c5"><h2>Can an attacker disguise it?</h2><div class="chart" id="radar" style="height:270px"></div><p class="note">The same attacks rewritten: capitals, look-alike letters, encoded. Share still stopped.</p></section>
+    <section class="card c6"><h2>Attacks that still get through</h2><div class="scroll"><table class="tbl" id="open-table"></table></div></section>
+    <section class="card c6"><h2>Normal requests blocked by mistake</h2><div class="scroll"><table class="tbl" id="fp-table"></table></div><p class="note"><a href="/api/report.md" target="_blank" rel="noopener">Open the full report</a></p></section>
+  </main>
+
+  <main class="grid page" data-page="traps" hidden>
+    <section class="card c7"><div class="head"><h2>Traps: fake secrets nobody honest uses</h2><span class="hint">Any use is a real incident</span></div><ul class="traps" id="traps"></ul></section>
+    <section class="card c5"><h2>Who took the bait?</h2><ul class="incidents" id="incidents"></ul></section>
+  </main>
+
+  <main class="grid page" data-page="try" hidden>
+    <section class="card c8"><h2>Try to get something past Shield</h2>
+      <div class="chips" id="examples"></div>
+      <div class="tryrow">
+        <input id="try-text" type="text" placeholder="Type any message" aria-label="Message">
+        <select id="try-dir" aria-label="Send as"><option value="input">as a prompt</option><option value="output">as a model reply</option><option value="tool_call">as a tool call</option><option value="tool_result">as tool data</option></select>
+        <button class="btn primary" id="try-send">Send</button>
+      </div>
+      <div id="try-out"></div>
+      <ul class="history" id="try-history"></ul></section>
+  </main>
+</div>
 <script src="/static/vendor/echarts.min.js"></script>
 <script src="/static/dashboard.js"></script>
 </body>
