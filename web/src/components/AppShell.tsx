@@ -1,6 +1,8 @@
 import { BookOpen, Crosshair, FlaskConical, GitCompareArrows, LayoutDashboard, Moon, Network, RefreshCw, ShieldCheck, Siren, Sun, Swords, Wand2 } from "lucide-react"
 import type { ReactNode } from "react"
 import { NavLink, useLocation } from "react-router-dom"
+
+import { Highlight, HighlightItem } from "@/components/animate-ui/primitives/effects/highlight"
 import { toast } from "sonner"
 
 import { Button } from "@/components/ui/button"
@@ -55,18 +57,24 @@ export function AppShell({ state, stage, children }: { state?: State; stage?: St
             <div className="text-xs font-medium text-red-600 dark:text-red-400">Redteam</div>
           </div>
         </div>
-        <nav className="flex gap-1 overflow-x-auto md:flex-col">
+        <Highlight as="nav" controlledItems hover value={pathname} className="rounded-lg bg-muted" containerClassName="flex gap-1 overflow-x-auto md:flex-col" mode="parent">
           {NAV.map(({ to, label, icon: Icon }) => (
-            <NavLink key={to} to={to} end={to === "/"}
-              className={({ isActive }) => cn(
-                "flex items-center gap-2.5 rounded-lg px-2.5 py-2 text-sm font-medium whitespace-nowrap text-muted-foreground transition-colors hover:bg-muted hover:text-foreground",
-                isActive && "bg-muted text-foreground")}>
-              <Icon className="size-4 shrink-0" />
-              {label}
-              {counts[to] ? <span className="ml-auto rounded-full bg-red-600 px-1.5 text-[11px] font-semibold text-white tabular-nums">{counts[to]}</span> : null}
-            </NavLink>
+            <HighlightItem key={to} value={to} asChild>
+              <NavLink to={to} end={to === "/"}
+                className={({ isActive }) => cn(
+                  "relative z-10 flex items-center gap-2.5 rounded-lg px-2.5 py-2 text-sm font-medium whitespace-nowrap text-muted-foreground transition-colors hover:text-foreground",
+                  isActive && "text-foreground")}>
+                {({ isActive }) => (
+                  <>
+                    <Icon className={cn("size-4 shrink-0 transition-transform duration-300", isActive && "scale-110")} />
+                    {label}
+                    {counts[to] ? <span className="ml-auto rounded-full bg-red-600 px-1.5 text-[11px] font-semibold text-white tabular-nums">{counts[to]}</span> : null}
+                  </>
+                )}
+              </NavLink>
+            </HighlightItem>
           ))}
-        </nav>
+        </Highlight>
         <div className="mt-auto hidden space-y-3 md:block">
           <ol className="space-y-2 rounded-xl border bg-muted/50 p-3 text-xs text-muted-foreground">
             {[`Fire ${state ? state.poligon.corpus.attacks + state.poligon.corpus.benign : "test"} messages at Shield`, "Its safeguards react", "Score what got through"].map((t, i) => (

@@ -1,7 +1,7 @@
 import { Download, Globe, KeyRound, Lock, Wrench } from "lucide-react"
 import { useMemo, useState } from "react"
 
-import { Empty, Panel, Pill, Stat } from "@/components/bits"
+import { Empty, Num, Panel, Pill, Stat } from "@/components/bits"
 import { type Leg, type Reach as ReachData, type ReachIdentity, useReach } from "@/lib/api"
 import { cn } from "@/lib/utils"
 
@@ -123,7 +123,7 @@ export function Reach() {
     <div className="grid grid-cols-12 gap-4">
       <div className="col-span-12 grid grid-cols-2 gap-4 lg:grid-cols-4">
         <Stat label="People and agents" value={data.identities.length} sub={`${agents.length} agents`} />
-        <Stat label="Hold all three capabilities" value={data.flagged.length} tone={data.flagged.length ? "bad" : "good"} sub="one planted instruction could move private data out" />
+        <Stat label="Hold all three capabilities" value={<Num value={data.flagged.length} />} tone={data.flagged.length ? "bad" : "good"} sub="one planted instruction could move private data out" />
         <Stat label="Agents among them" value={agents.filter((a) => a.trifecta).length} tone={agents.some((a) => a.trifecta) ? "bad" : "good"} />
         <Stat label="Best single fix" value={data.fixes[0] ? `${data.fixes[0].fixes.length} fixed` : "none"} sub={data.fixes[0]?.change ?? "no single change breaks a combination"} />
       </div>

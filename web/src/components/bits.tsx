@@ -1,5 +1,7 @@
 import type { ReactNode } from "react"
 
+import { SlidingNumber } from "@/components/animate-ui/primitives/texts/sliding-number"
+
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { cn } from "@/lib/utils"
 
@@ -45,4 +47,10 @@ export function Stat({ label, value, sub, tone }: { label: string; value: ReactN
 
 export function Empty({ children }: { children: ReactNode }) {
   return <p className="py-6 text-center text-sm text-muted-foreground">{children}</p>
+}
+
+/** A number that slides to its new value when it changes. */
+export function Num({ value, decimals = 0 }: { value: number | null | undefined; decimals?: number }) {
+  if (value == null || Number.isNaN(value)) return <>–</>
+  return <SlidingNumber number={value} decimalPlaces={decimals} className="inline-flex tabular-nums" />
 }

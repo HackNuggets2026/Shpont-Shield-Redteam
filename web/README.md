@@ -18,3 +18,4 @@ The built bundle is committed, so `shield-redteam serve` shows the dashboard wit
 | `src/components/Pipeline.tsx` | the pipeline drawing: two lanes that narrow at every stage by what it caught, with the safeguards under each stage |
 | `src/pages/*` | Start here, Overview, Safeguards, Attacks, Traps, Reach map, What-if, Autopatch, Playground |
 | `src/components/ui/*` | shadcn/ui components, generated with `npx shadcn add` |
+| `src/components/animate-ui/*` | Animate UI components (animate-ui.com, registry `@animate-ui` in components.json): sliding numbers, sidebar highlight, animated switch, shimmering text. The Base UI ones were fetched from the registry with the import renamed to `@base-ui/react` |

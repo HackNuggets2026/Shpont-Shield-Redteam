@@ -1,7 +1,7 @@
 import { FolderKanban, KeyRound, Lock, MessageSquareWarning, ServerCog, UserRound } from "lucide-react"
 import { toast } from "sonner"
 
-import { Empty, Panel, Pill, Stat } from "@/components/bits"
+import { Empty, Num, Panel, Pill, Stat } from "@/components/bits"
 import { Button } from "@/components/ui/button"
 import { type Stage, type State, useSteal } from "@/lib/api"
 import { CHANNEL, clock } from "@/lib/format"
@@ -21,7 +21,7 @@ export function Traps({ state, stage }: { state: State; stage: Stage }) {
     <div className="space-y-4">
       <div className="grid grid-cols-2 gap-4 lg:grid-cols-4">
         <Stat label="Traps planted" value={tw.decoys.length} />
-        <Stat label="Incidents" value={tw.incidents} tone={tw.incidents ? "bad" : "good"} sub="each one is confirmed, not a guess" />
+        <Stat label="Incidents" value={<Num value={tw.incidents} />} tone={tw.incidents ? "bad" : "good"} sub="each one is confirmed, not a guess" />
         <Stat label="People and agents caught" value={tw.by_principal.length} tone={tw.by_principal.length ? "bad" : "good"} />
         <Stat label="Enforced by Shield" value={tw.feed_applied ? "Yes" : "Not yet"} tone={tw.feed_applied ? "good" : "bad"} sub={`${tw.drills} self-test hits not counted`} />
       </div>

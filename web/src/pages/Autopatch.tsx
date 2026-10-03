@@ -1,7 +1,8 @@
 import { ArrowRight, Check, Loader2, Undo2, Wand2 } from "lucide-react"
 import { toast } from "sonner"
 
-import { Empty, Panel, Pill, Stat } from "@/components/bits"
+import { ShimmeringText } from "@/components/animate-ui/primitives/texts/shimmering"
+import { Empty, Num, Panel, Pill, Stat } from "@/components/bits"
 import { Button } from "@/components/ui/button"
 import { type State, useApplyPatch, usePatches, useRevertPatch } from "@/lib/api"
 import { cap, clock, words } from "@/lib/format"
@@ -15,13 +16,13 @@ export function Autopatch({ state }: { state: State }) {
   return (
     <div className="grid grid-cols-12 gap-4">
       <div className="col-span-12 grid grid-cols-2 gap-4 lg:grid-cols-4">
-        <Stat label="Attacks getting through" value={r ? r.attacks.total - r.attacks.stopped : "–"} tone={r && r.attacks.total - r.attacks.stopped ? "bad" : "good"} />
+        <Stat label="Attacks getting through" value={<Num value={r ? r.attacks.total - r.attacks.stopped : null} />} tone={r && r.attacks.total - r.attacks.stopped ? "bad" : "good"} />
         <Stat label="Patches proposed" value={data?.proposals.length ?? "–"} />
         <Stat label="Proven safe" value={proven.length} tone={proven.length ? "good" : undefined} sub="close their attack, block no legitimate request" />
         <Stat label="Applied" value={data?.applied.length ?? 0} sub={best ? `one patch alone reaches ${best}` : undefined} />
       </div>
       <Panel className="col-span-12 lg:col-span-8" title="Proposed patches" hint="Each one is a rule written from an attack that got through, then tested in a private copy of Shield on every test message and recent real requests."
-        action={data?.busy ? <Pill tone="info"><Loader2 className="size-3 animate-spin" />proving</Pill> : null}>
+        action={data?.busy ? <Pill tone="info"><Loader2 className="size-3 animate-spin" /><ShimmeringText text="proving in a copy of Shield" duration={1.4} /></Pill> : null}>
         {data?.error ? <p className="mb-3 text-sm text-red-600">{data.error}</p> : null}
         {!data ? <Empty>Loading…</Empty> : data.proposals.length ? (
           <ul className="space-y-3">
@@ -47,7 +48,7 @@ export function Autopatch({ state }: { state: State }) {
               </li>
             ))}
           </ul>
-        ) : <Empty>{data.busy ? "Writing and proving patches…" : "Nothing to patch: every attack in the test set is stopped."}</Empty>}
+        ) : <Empty>{data.busy ? <ShimmeringText text="Writing rules and proving them on every test message…" duration={1.6} /> : "Nothing to patch: every attack in the test set is stopped."}</Empty>}
       </Panel>
       <Panel className="col-span-12 lg:col-span-4" title="Applied patches" hint="Published through the signature feed Shield already reads">
         {data?.applied.length ? (

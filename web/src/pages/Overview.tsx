@@ -2,7 +2,7 @@ import { ArrowDownRight, ArrowUpRight, Check, ShieldAlert, ShieldCheck, Triangle
 import { useEffect, useState } from "react"
 import { Area, AreaChart, CartesianGrid, ReferenceLine, ResponsiveContainer, Tooltip, XAxis, YAxis } from "recharts"
 
-import { Empty, Panel, Pill, Stat } from "@/components/bits"
+import { Empty, Num, Panel, Pill, Stat } from "@/components/bits"
 import { Pipeline } from "@/components/Pipeline"
 import { ScoreRing } from "@/components/ScoreRing"
 import { Sheet, SheetContent, SheetDescription, SheetHeader, SheetTitle } from "@/components/ui/sheet"
@@ -70,10 +70,10 @@ export function Overview({ state, stage }: { state: State; stage: Stage }) {
   return (
     <div className="grid grid-cols-12 gap-4">
       <div className="col-span-12 grid grid-cols-2 gap-4 lg:grid-cols-4">
-        <Stat label="Attacks stopped" value={`${r.attacks.stopped} / ${r.attacks.total}`} sub={pct(r.protection)} tone={miss ? undefined : "good"} />
-        <Stat label="Normal requests blocked by mistake" value={`${r.benign.stopped} / ${r.benign.total}`} sub={pct(r.friction)} tone={r.benign.stopped ? "warn" : "good"} />
-        <Stat label="Disguised attacks stopped" value={pct(r.evasion)} sub={`${r.mutants.stopped} of ${r.mutants.total} rewrites`} />
-        <Stat label="Delay added per message" value={`${r.latency_ms.p95} ms`} sub="slowest 5% of messages" />
+        <Stat label="Attacks stopped" value={<><Num value={r.attacks.stopped} /> / {r.attacks.total}</>} sub={pct(r.protection)} tone={miss ? undefined : "good"} />
+        <Stat label="Normal requests blocked by mistake" value={<><Num value={r.benign.stopped} /> / {r.benign.total}</>} sub={pct(r.friction)} tone={r.benign.stopped ? "warn" : "good"} />
+        <Stat label="Disguised attacks stopped" value={<><Num value={Math.round((r.evasion ?? 0) * 100)} />%</>} sub={`${r.mutants.stopped} of ${r.mutants.total} rewrites`} />
+        <Stat label="Delay added per message" value={<><Num value={r.latency_ms.p95} decimals={2} /> ms</>} sub="slowest 5% of messages" />
       </div>
 
       <Panel className="col-span-12" title="What happens to every test message?" hint="Messages enter on the left and pass five stages. Each stage takes out what it catches. Click a safeguard to switch it off.">

@@ -1,5 +1,5 @@
 import { Empty, Panel, Pill } from "@/components/bits"
-import { Switch } from "@/components/ui/switch"
+import { Switch } from "@/components/animate-ui/components/base/switch"
 import { useToggleSafeguard } from "@/lib/actions"
 import type { Stage, State } from "@/lib/api"
 import { ABOUT, cap, tally } from "@/lib/format"

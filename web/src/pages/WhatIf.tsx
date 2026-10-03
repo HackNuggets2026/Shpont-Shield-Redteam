@@ -2,7 +2,8 @@ import { ArrowRight, FlaskConical, Loader2, RotateCcw } from "lucide-react"
 import { useState } from "react"
 import { toast } from "sonner"
 
-import { Empty, Panel, Pill } from "@/components/bits"
+import { ShimmeringText } from "@/components/animate-ui/primitives/texts/shimmering"
+import { Empty, Num, Panel, Pill } from "@/components/bits"
 import { Button } from "@/components/ui/button"
 import { type ChangeSpec, type Preview, previewChanges, type Stage, useApplyChanges } from "@/lib/api"
 import { cap, CHANNEL, scoreTone, TONE_TEXT, words } from "@/lib/format"
@@ -23,7 +24,7 @@ function Score({ label, value }: { label: string; value: number | null }) {
   return (
     <div className="text-center">
       <div className="text-xs text-muted-foreground">{label}</div>
-      <div className={cn("text-4xl font-semibold tracking-tight tabular-nums", TONE_TEXT[scoreTone(value)])}>{value ?? "–"}</div>
+      <div className={cn("text-4xl font-semibold tracking-tight tabular-nums", TONE_TEXT[scoreTone(value)])}><Num value={value} decimals={1} /></div>
     </div>
   )
 }
@@ -118,7 +119,7 @@ export function WhatIf({ stage }: { stage: Stage }) {
               </Button>
             </div>
           </>
-        ) : <Empty>{changes.length ? "Press Preview." : "Pick a change on the left, for example switch Secrets off."}</Empty>}
+        ) : <Empty>{busy ? <ShimmeringText text="Running your change in a private copy of Shield…" duration={1.6} /> : changes.length ? "Press Preview." : "Pick a change on the left, for example switch Secrets off."}</Empty>}
       </Panel>
     </div>
   )
