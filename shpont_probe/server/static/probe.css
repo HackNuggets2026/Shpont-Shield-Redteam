@@ -4,7 +4,8 @@ body { margin: 0; }
 .acl-s4 { grid-column: span 4; } .acl-s5 { grid-column: span 5; } .acl-s6 { grid-column: span 6; }
 .acl-s7 { grid-column: span 7; } .acl-s8 { grid-column: span 8; } .acl-s12 { grid-column: span 12; }
 .acl-grid { align-items: start; }
-.acl-stack { display: grid; gap: 16px; align-content: start; }
+.acl-grid > div, .acl-stack > * { min-width: 0; }
+.acl-stack { display: grid; grid-template-columns: minmax(0, 1fr); gap: 16px; align-content: start; }
 .acl-scroll { overflow-x: auto; }
 .markdown-body table { display: table; width: 100%; font-size: 12px; margin: 0; }
 .markdown-body td, .markdown-body th { vertical-align: middle; }
@@ -14,7 +15,7 @@ body { margin: 0; }
 .acl-hero { font-size: 48px; font-weight: 600; line-height: 1; font-variant-numeric: tabular-nums; }
 .acl-tools { display: flex; flex-wrap: wrap; gap: 6px; align-items: center; }
 .acl-meter { display: flex; min-width: 80px; margin: 4px 0 2px; }
-.acl-clip { max-width: 420px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.acl-clip { max-width: 340px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .acl-fresh { animation: acl-fresh 2s ease-out; }
 @keyframes acl-fresh { from { background: var(--bgColor-attention-muted, #fff8c5); } to { background: transparent; } }
 @media (max-width: 1100px) { .acl-s4, .acl-s5, .acl-s6, .acl-s7, .acl-s8 { grid-column: span 12; } }
