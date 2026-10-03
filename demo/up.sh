@@ -18,6 +18,7 @@ sleep 2   # the gateway loads the feed from Redteam at start-up
 (cd "$SHIELD" && nohup .venv/bin/python -m controllayer --policy "$OLDPWD/.run/policy.yaml" > "$OLDPWD/.run/shield.log" 2>&1 &)
 sleep 3
 .venv/bin/python demo/traffic.py --gateway http://127.0.0.1:8787 > .run/traffic.log 2>&1 || true
+.venv/bin/python demo/trail.py --gateway http://127.0.0.1:8787 > .run/trail.log 2>&1 || true
 echo "Redteam dashboard   http://127.0.0.1:8799/"
 echo "Shield dashboard  http://127.0.0.1:8787/?token=demo-admin-token"
 echo "Policy to edit    $(pwd)/.run/policy.yaml"

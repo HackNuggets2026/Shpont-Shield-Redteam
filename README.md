@@ -46,6 +46,10 @@ The team built four control layers. The Referee fires the same corpus (trap dril
 
 Long-term memory lets an agent be misled later by something it read once. `shield_redteam/memory/` is a memory API for agents that keeps where every entry came from: content from email, web pages or documents is checked by Shield before it is kept; an entry that tries to give orders, or a burst of near-identical entries, is quarantined until a person releases it; on recall, outside content comes back as labelled reference material, and an agent reads only its own namespace and the shared ones it is given. This covers memory poisoning, which the team's other repositories list as out of scope (OWASP LLM04 and LLM08). A six-scenario self-test runs against the live layer. `POST /api/memory/write`, `/api/memory/recall`, `/api/memory/release`, `/api/memory/selftest`, `GET /api/memory`.
 
+## Data trail
+
+Detectors recognise card numbers and keys, not a customer's name or a contract number, and each step of a leak can look harmless: one agent reads a CRM record, a later call by another agent sends the name to an outside site. `shield_redteam/trail/` reads the tool results of real traffic, remembers the values returned under sensitive field names (name, contract, account, email and similar) for 24 hours, and publishes each as a signature that applies only to outgoing tool calls. Reading the data stays allowed; sending it out is blocked, and every stopped attempt is linked back to who read the value, through which tool and when. Only values are learned, from traffic Shield already inspects; the dashboard shows them masked. Because the feed now carries those values, `/feed/signatures.json` requires `?token=` (`REDTEAM_FEED_TOKEN`, or derived from the seed; `plant` writes it into the policy). Learning reads the raw text Shield keeps only with `plant --record-raw` (demo only). Try it with `python demo/trail.py` or the "Play a two-step leak" button. `GET /api/trail`, `POST /api/trail/demo`.
+
 ## The dashboard
 
 `/` is a React app (`web/`: React, TypeScript, Tailwind, shadcn/ui, Recharts) with a left navigation, light and dark themes, and five sections. Every block is titled with the question it answers and is drawn from the live layer. The built bundle ships inside the Python package, so there is no Node at runtime.
@@ -59,6 +63,7 @@ Long-term memory lets an agent be misled later by something it read once. `shiel
 | **Playground** | write any message, pick the channel, see which safeguard reacted and how fast | the live layer, unmetered |
 | **Reach map** | who can reach what, the identities holding all three dangerous capabilities, and the single changes that break them | Shield's identities, roles, entitlements and grants |
 | **What-if** | draft a settings change, preview it on test attacks and real requests, then apply it | a sandboxed copy of Shield |
+| **Data trail** | each stopped attempt as a chain (read by, tried to leave via, blocked) and the values being traced, masked | real tool results and outgoing calls in Shield's audit trail |
 | **Autopatch** | proposed rules with their proof (score before and after, cases closed, legitimate requests affected), apply and revert | the sandbox, then the signature feed |
 
 `/console` shows the same data as five tabs inside the Shield security console shell: Redteam's part there is one file, `shield_redteam/server/static/console/views/redteam.js`, written against Shield's `docs/console-contract.md`. To merge into Shield: copy it into `controllayer/dashboard/views/`, add its script tag to `panel.html`, set `window.REDTEAM_API` to the Redteam service.
@@ -128,7 +133,7 @@ Everything is in [`redteam.yaml`](redteam.yaml): the target, the corpus, the dec
 | `/` | the dashboard |
 | `/console` | the same data as tabs in the Shield console shell |
 | `/api/stage` | controls in evaluation order with live state, and where each payload stopped |
-| `/feed/signatures.json` | the managed feed plus one signature per decoy; point the control layer's `signatures.feed` here |
+| `/feed/signatures.json?token=` | the managed feed plus one signature per decoy and per traced value; point the control layer's `signatures.feed` here |
 | `/api/state` | everything the dashboard shows, as JSON |
 | `/api/report.md`, `/api/report.json` | posture report for management and for the security team |
 | `POST /api/run` | fire the corpus now |
@@ -155,6 +160,7 @@ The four open attacks, the false positive and the weak evasion techniques (base6
 - `/admin/try` takes no tool name or model, so tool-RBAC and model-allowlist rules are not exercised by the corpus yet.
 - Self-test runs appear in the control layer's audit trail under the `dashboard` channel.
 - A decoy only catches what touches it. It complements content inspection, it does not replace it.
+- The data trail only follows values that came back in JSON under a recognisable field name, and only exact (case- and spacing-tolerant) copies; a paraphrased or translated value gets past it.
 - State is in memory, except tripwire alerts, which are appended to `data/tripwire-alerts.jsonl`.
 
 See [docs/architecture.md](docs/architecture.md) for the layout and the seams left for the next modules.
