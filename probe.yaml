@@ -1,0 +1,68 @@
+# Shpont Probe: one file configures both modules. ${VAR:-default} reads the environment.
+
+target:
+  url: ${SHIELD_URL:-http://127.0.0.1:8787}          # the control layer under test
+  admin_token: ${ACL_ADMIN_TOKEN:-demo-admin-token}
+
+# --- Poligon: continuous self-attack ------------------------------------------
+poligon:
+  corpus: corpus            # attacks/ must be stopped, benign/ must pass
+  mutate: true              # also fire evasion rewrites of every attack
+  interval_seconds: 30      # re-fire on a timer; a policy or feed change re-fires at once
+  workers: 8
+
+# --- Tripwire: decoys ---------------------------------------------------------
+# class: trap   = nobody has a reason to touch it; any sighting trips
+#        marker = fake record inside real data; trips when it leaves through a tool call
+#        canary = lives in a system prompt; trips when a reply or tool call contains it
+# kind:  aws_key | github_token | password | codename | person | hostname | canary | literal
+tripwire:
+  seed: ${TRIPWIRE_SEED:-demo-seed-rotate-me}   # honeytokens are derived from this; keep it secret
+  base_feed: ${BASE_FEED:-../Shpont-Shield/feeds/signatures.json}   # file or URL of the managed feed
+  alerts: data/tripwire-alerts.jsonl
+  decoys:
+    - id: vault-root
+      class: trap
+      kind: password
+      label: Root password of the secrets vault
+      planted_in: catalog resource "vault-root-admin"
+      resource:
+        id: vault-root-admin
+        name: Secrets vault (root access)
+        description: Break-glass root credential. Do not use.
+        type: credential
+        sensitivity: high
+        entitled: { teams: [engineering, finance, platform, interns] }
+        mock: 'root password: {value}'
+    - id: deploy-key
+      class: trap
+      kind: aws_key
+      label: AWS deploy key left in a repository
+      planted_in: file .env.backup in the acme/web repository
+      plant:
+        resource: github-acme
+        path: "GET /repos/acme/web/contents/.env.backup"
+        body: 'AWS_ACCESS_KEY_ID={value}'
+    - id: ghost-customer
+      class: marker
+      kind: person
+      label: Customer record that does not exist
+      planted_in: Salesforce CRM account list
+      plant:
+        resource: salesforce-crm
+        path: "GET /accounts"
+        body: '[{"id": 42, "name": "Jan Kowalski"}, {"id": 9001, "name": "{value}"}]'
+    - id: ghost-project
+      class: marker
+      kind: codename
+      label: Project codename that was never assigned
+      planted_in: internal wiki, page "Roadmap 2027"
+    - id: system-prompt
+      class: canary
+      kind: canary
+      label: System prompt canary
+      planted_in: system prompt of every company agent
+
+server:
+  host: 127.0.0.1
+  port: 8799
