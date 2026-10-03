@@ -155,3 +155,11 @@ export const memoryWrite = (b: { namespace: string; writer: string; source: stri
 export const memoryRecall = (b: { reader: string; query: string; shared: string[] }) => post<Recall>("/api/memory/recall", b)
 export const memorySelfTest = () => post<{ results: SelfTestRow[] }>("/api/memory/selftest")
 export const memoryRelease = (id: string) => post<{ ok: boolean }>("/api/memory/release", { id, by: "security console" })
+
+// ---- data trail ----------------------------------------------------------------------------
+
+export interface TracedValue { id: string; sig_id: string; masked: string; field: string; reader: string; tool: string | null; read_at: number }
+export interface TrailIncident { ts: number; sig_id: string; action: string; moved_by: string; team: string; tool: string | null; direction: string; read: TracedValue | null }
+export interface TrailState { traced: TracedValue[]; count: number; incidents: TrailIncident[]; can_demo: boolean }
+export const useTrail = () => useQuery({ queryKey: ["trail"], queryFn: () => get<TrailState>("/api/trail"), refetchInterval: 2000 })
+export const trailDemo = () => post<{ ok: boolean; contract: string }>("/api/trail/demo")

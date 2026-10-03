@@ -13,6 +13,7 @@ import { Playground } from "@/pages/Playground"
 import { Reach } from "@/pages/Reach"
 import { Referee } from "@/pages/Referee"
 import { Safeguards } from "@/pages/Safeguards"
+import { Trail } from "@/pages/Trail"
 import { Traps } from "@/pages/Traps"
 import { WhatIf } from "@/pages/WhatIf"
 
@@ -41,6 +42,7 @@ export default function App() {
           <Route path="/referee" element={<Referee />} />
           <Route path="/reach" element={<Reach />} />
           <Route path="/memory" element={<Memory />} />
+          <Route path="/trail" element={<Trail />} />
           <Route path="/whatif" element={<WhatIf stage={stage} />} />
           <Route path="/autopatch" element={<Autopatch state={state} />} />
         </Routes>

@@ -100,7 +100,9 @@ def cmd_plant(args: argparse.Namespace) -> int:
     cfg = load(args.config)
     registry = Registry.from_config(cfg.tripwire)
     policy = yamlio.load(Path(args.policy))
-    url = args.feed_url or f"http://{cfg.server['host']}:{cfg.server['port']}/feed/signatures.json"
+    url = (
+        args.feed_url or f"http://{cfg.server['host']}:{cfg.server['port']}/feed/signatures.json?token={cfg.feed_token}"
+    )
     patched, notes = patch_policy(policy, registry, cfg.tripwire["decoys"], url, args.refresh)
     if args.record_raw:
         # Demo only: keep request text unmasked in the audit trail, so What-if can replay it exactly.

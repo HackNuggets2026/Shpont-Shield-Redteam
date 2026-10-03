@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import hashlib
 import os
 import re
 from dataclasses import dataclass
@@ -61,6 +62,13 @@ class Config:
     @property
     def reach(self) -> dict[str, Any]:
         return self.raw.get("reach", {})
+
+    @property
+    def feed_token(self) -> str:
+        """Guards the published feed: once the data trail runs, it carries values read from real records."""
+        if os.environ.get("REDTEAM_FEED_TOKEN"):
+            return os.environ["REDTEAM_FEED_TOKEN"]
+        return hashlib.sha256(("feed:" + str(self.tripwire.get("seed", ""))).encode()).hexdigest()[:24]
 
     @property
     def server(self) -> dict[str, Any]:
