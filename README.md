@@ -32,11 +32,23 @@ flowchart LR
   P & A --> UI
 ```
 
+## The stage
+
+`/` is one screen built for a projector. Both halves are driven by the same live data, nothing is scripted.
+
+- **Shield, plan view.** The control layer drawn as rings in the order it evaluates them: access, budgets, deterministic checks, contextual PII, semantic controls. Each arc is one control and takes its state from the live policy: enforcing, log-only, shadow or switched off. Every dot is a payload Poligon fired at the real layer; it stops on the control that stopped it. A dot that reaches the centre is an attack that got through. The centre shows the measured posture score.
+- **Cross-section.** The same pipeline cut the other way: stages as floors, the five kinds of traffic as lanes (prompt, tool call, model reply, tool result, tool listing). Each cell counts what was stopped there, the vault row counts what was delivered.
+- **Decoy rooms.** One room per Tripwire decoy. A real hit lights the room, flashes its marker on the shield and names the agent.
+- **Change banner.** Edit the policy or the feed: within about three seconds the affected arc changes state, the banner states the posture delta and what is now getting through, and the dots start passing the open arc.
+- **Live traffic.** Real requests through the gateway (not self-test) fly in as larger dots labelled with the principal.
+
+`/details` has the full lists (open attacks, false positives, evasions, feed self-test) for the security team. Press `f` on the stage for full screen.
+
 ## Quick start
 
 ```bash
 python -m venv .venv && .venv/bin/pip install -e '.[dev]'
-.venv/bin/python -m pytest          # 47 tests, ~2 s; 4 of them run against the real Shield in-process
+.venv/bin/python -m pytest          # 54 tests, ~2 s; 4 of them run against the real Shield in-process
 
 # Shield checked out next to this repo, with its own .venv (see its README):
 demo/up.sh                          # starts both, decoys planted
@@ -88,7 +100,9 @@ Everything is in [`probe.yaml`](probe.yaml): the target, the corpus, the decoys 
 
 | Endpoint | For |
 |---|---|
-| `/` | dashboard |
+| `/` | the stage: shield, cross-section, decoy rooms |
+| `/details` | detail dashboard for the security team |
+| `/api/stage` | rings, per-payload outcomes, live traffic and decoy state for the stage |
 | `/feed/signatures.json` | the managed feed plus one signature per decoy; point the control layer's `signatures.feed` here |
 | `/api/state` | everything the dashboard shows, as JSON |
 | `/api/report.md`, `/api/report.json` | posture report for management and for the security team |

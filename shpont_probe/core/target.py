@@ -74,6 +74,12 @@ class GatewayTarget:
             ]
         )
 
+    def _policy_doc(self) -> dict[str, Any]:
+        try:
+            return self.http.get("/admin/policy").json().get("policy", {})
+        except (httpx.HTTPError, ValueError):
+            return {}
+
     def describe(self) -> dict[str, Any]:
         s = self._summary()
         return {
@@ -82,6 +88,7 @@ class GatewayTarget:
             "feed": s["feed"],
             "semantic": s["semantic"],
             "controls": s["controls"],
+            "policy_doc": self._policy_doc(),
         }
 
     def events(self, limit: int = 200) -> list[dict[str, Any]]:

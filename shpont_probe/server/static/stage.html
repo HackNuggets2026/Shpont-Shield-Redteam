@@ -1,0 +1,309 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Shpont · AI Control Layer</title>
+<style>
+:root{--bg:#070a0f;--panel:#0c1118;--line:#1b2431;--line2:#263243;--text:#e2e8f0;--mute:#7f8ca0;--dim:#4d596b;
+--ring:#3fa7c9;--good:#35d39a;--bad:#ff4d5e;--warn:#f2b54a;--legit:#6ea8ff;--decoy:#c08bff;
+--mono:ui-monospace,SFMono-Regular,"JetBrains Mono",Menlo,Consolas,monospace;--sans:Inter,system-ui,-apple-system,"Segoe UI",Roboto,sans-serif}
+*{box-sizing:border-box}
+html,body{height:100%}
+body{margin:0;background:var(--bg);color:var(--text);font:14px/1.4 var(--sans);overflow:hidden;display:grid;grid-template-rows:auto minmax(0,1fr) auto}
+header{display:flex;align-items:center;gap:18px;padding:12px 22px;border-bottom:1px solid var(--line)}
+.brand{white-space:nowrap;font-weight:700;letter-spacing:.14em;font-size:14px}
+.brand span{color:var(--mute);font-weight:500;letter-spacing:.08em;margin-left:10px}
+.meta{font-family:var(--mono);font-size:12px;color:var(--mute);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;min-width:0}
+.right{margin-left:auto;display:flex;align-items:center;gap:10px;flex-shrink:0}
+.live{display:flex;align-items:center;gap:7px;font-family:var(--mono);font-size:12px;color:var(--mute)}
+.live i{width:8px;height:8px;border-radius:50%;background:var(--good);box-shadow:0 0 0 0 var(--good);animation:beat 2s infinite}
+.live.off i{background:var(--bad);animation:none}
+@keyframes beat{0%{box-shadow:0 0 0 0 rgba(53,211,154,.5)}100%{box-shadow:0 0 0 9px rgba(53,211,154,0)}}
+button,a.btn{background:transparent;color:var(--text);border:1px solid var(--line2);border-radius:6px;padding:6px 12px;font:500 12px var(--sans);cursor:pointer;text-decoration:none;letter-spacing:.02em}
+button:hover,a.btn:hover{border-color:var(--ring)}
+button.primary{border-color:var(--ring);color:#bfeaf7}
+main{display:grid;grid-template-columns:minmax(0,1.08fr) minmax(0,1fr);min-height:0}
+.pane{position:relative;min-width:0;min-height:0;display:flex;flex-direction:column}
+.pane+.pane{border-left:1px solid var(--line)}
+.title{display:flex;align-items:baseline;gap:12px;padding:14px 22px 0}
+.title h2{margin:0;font-size:11px;letter-spacing:.16em;text-transform:uppercase;color:var(--mute);font-weight:600}
+.title small{color:var(--dim);font-size:12px}
+#radarWrap{position:relative;flex:1;min-height:0}
+#radar{position:absolute;inset:0;width:100%;height:100%}
+#banner{margin:10px 22px 0;padding:12px 16px;border-radius:8px;border:1px solid var(--bad);background:rgba(40,10,16,.92);backdrop-filter:blur(4px);display:none;z-index:3}
+#banner.good{border-color:var(--good);background:rgba(8,34,26,.92)}
+#banner b{font:700 22px var(--mono);margin-right:12px}
+#banner .why{color:var(--mute);font-size:12px;margin-top:3px}
+.legend{position:absolute;left:22px;bottom:12px;display:grid;grid-template-columns:auto auto;gap:3px 18px;font-size:11px;color:var(--mute)}
+.legend i{display:inline-block;width:9px;height:9px;border-radius:50%;margin-right:6px;vertical-align:-1px}
+.legend u{display:inline-block;width:18px;height:0;border-top:3px solid;margin-right:6px;vertical-align:3px;text-decoration:none}
+#callouts{position:absolute;right:22px;bottom:12px;width:min(44%,380px);display:flex;flex-direction:column;gap:6px;z-index:2}
+.callout{border-left:3px solid var(--decoy);background:rgba(24,16,36,.9);padding:7px 10px;border-radius:0 6px 6px 0;font-size:12px;animation:slide .35s ease-out}
+.callout b{color:#e3ccff}
+.callout.real{border-color:var(--legit);background:rgba(12,20,36,.9)}
+.callout .t{color:var(--mute);font-family:var(--mono);font-size:11px}
+@keyframes slide{from{transform:translateX(16px);opacity:0}to{transform:none;opacity:1}}
+/* cross-section */
+#section{position:relative;flex:1;min-height:0;margin:10px 22px 14px;display:grid;grid-template-columns:150px repeat(5,minmax(0,1fr));grid-template-rows:auto repeat(6,minmax(0,1fr));gap:0;border:1px solid var(--line);border-radius:8px;overflow:hidden;background:var(--panel)}
+#section .head{grid-row:1;display:flex;flex-direction:column;justify-content:center;align-items:center;text-align:center;padding:10px 4px;border-bottom:1px solid var(--line2);font-size:11px;color:var(--mute);letter-spacing:.04em}
+#section .head b{color:var(--text);font-size:12px;font-weight:600;letter-spacing:.02em}
+#section .floor{display:flex;flex-direction:column;justify-content:center;padding:8px 12px;border-bottom:1px solid var(--line);border-right:1px solid var(--line2);min-width:0}
+#section .floor b{font-size:12px;letter-spacing:.08em;text-transform:uppercase;font-weight:600}
+#section .chips{display:flex;flex-wrap:wrap;gap:3px;margin-top:5px}
+.chip{font-size:10px;padding:1px 6px;border-radius:999px;border:1px solid rgba(63,167,201,.6);color:#a9dcec;white-space:nowrap}
+.chip.monitor{border-color:var(--warn);color:var(--warn);border-style:dashed}
+.chip.shadow{border-color:var(--dim);color:var(--mute);border-style:dotted}
+.chip.off{border-color:var(--bad);color:var(--bad);text-decoration:line-through}
+#section .cell{display:flex;align-items:center;justify-content:center;gap:8px;border-bottom:1px solid var(--line);border-right:1px dashed var(--line);font:600 15px var(--mono);font-variant-numeric:tabular-nums;transition:background .6s}
+#section .cell.hit{background:rgba(53,211,154,.16);transition:none}
+#section .cell.fp{background:rgba(242,181,74,.2);transition:none}
+#section .cell.breach{background:rgba(255,77,94,.25);transition:none}
+.g{color:var(--good)}.a{color:var(--warn)}.r{color:var(--bad)}.l{color:var(--legit)}.z{color:var(--line2)}
+#section .vault{background:repeating-linear-gradient(135deg,rgba(63,167,201,.05) 0 8px,transparent 8px 16px);border-bottom:0}
+#section .vault.floor b{color:#bfeaf7}
+#section .floor small{color:var(--dim);font-size:10px}
+#sectionFx{position:absolute;inset:0;width:100%;height:100%;pointer-events:none}
+.rooms{display:grid;grid-template-columns:repeat(5,minmax(0,1fr));gap:8px;margin:0 22px 14px}
+.room{border:1px solid var(--line2);border-radius:6px;padding:7px 9px;font-size:11px;min-width:0;background:var(--panel)}
+.room b{display:block;font-size:12px;line-height:1.25;min-height:2.5em}
+.room span{color:var(--mute)}
+.room .lamp{float:right;width:8px;height:8px;border-radius:50%;background:var(--decoy);opacity:.55;margin-top:4px}
+.room.tripped{border-color:var(--decoy);background:rgba(192,139,255,.1)}
+.room.tripped .lamp{opacity:1;box-shadow:0 0 8px var(--decoy)}
+.room.flash{animation:trip 1.4s}
+@keyframes trip{0%{box-shadow:0 0 0 3px var(--decoy)}100%{box-shadow:0 0 0 0 transparent}}
+footer{display:grid;grid-template-columns:repeat(6,auto) minmax(0,1fr);gap:0;border-top:1px solid var(--line);background:var(--panel)}
+.kpi{padding:12px 22px;border-right:1px solid var(--line)}
+.kpi b{display:block;font:700 26px/1.1 var(--mono);font-variant-numeric:tabular-nums}
+.kpi>span{font-size:10px;display:block;margin-bottom:3px;letter-spacing:.14em;text-transform:uppercase;color:var(--mute)}
+.kpi b span{font:inherit;letter-spacing:0}
+.kpi small{color:var(--dim);font:12px var(--mono);margin-left:6px;font-weight:400}
+#tape{padding:10px 22px;font:12px/1.55 var(--mono);color:var(--mute);overflow:hidden;min-width:0}
+#tape div{white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+#tape div:first-child{color:var(--text)}
+@media (max-height:860px){#section .floor{padding:2px 10px;overflow:hidden}#section .floor b{font-size:11px}#section .chips{gap:2px;margin-top:2px}.chip{font-size:9px;padding:0 5px}#section .head{padding:5px 4px}.room b{min-height:0}}
+@media (max-width:1100px){body{overflow:auto;display:block}main{grid-template-columns:1fr}#radarWrap{height:70vw}#section{height:520px}.pane+.pane{border-left:0;border-top:1px solid var(--line)}footer{grid-template-columns:repeat(3,1fr)}#tape{grid-column:1/-1}}
+</style>
+</head>
+<body>
+<header>
+  <div class="brand">SHPONT<span>AI CONTROL LAYER</span></div>
+  <div class="meta" id="meta">connecting…</div>
+  <div class="right">
+    <div class="live" id="live"><i></i><span id="runNo">run 0</span></div>
+    <button class="primary" id="fire">Attack now</button>
+    <a class="btn" href="/details">Details</a>
+    <a class="btn" href="/api/report.md" target="_blank">Report</a>
+  </div>
+</header>
+<main>
+  <div class="pane">
+    <div class="title"><h2>Shield · plan view</h2><small>every dot is a real payload fired at the live layer; it dies on the control that stopped it</small></div>
+    <div id="banner"></div>
+    <div id="radarWrap">
+      <canvas id="radar"></canvas>
+      <div class="legend">
+        <span><i style="background:var(--bad)"></i>attack</span><span><u style="border-color:var(--ring)"></u>control enforcing</span>
+        <span><i style="background:var(--legit)"></i>legitimate request</span><span><u style="border-color:var(--warn);border-top-style:dashed"></u>monitor only</span>
+        <span><i style="background:var(--decoy);border-radius:1px;transform:rotate(45deg)"></i>decoy</span><span><u style="border-color:var(--bad);border-top-style:dotted"></u>switched off</span>
+      </div>
+      <div id="callouts"></div>
+    </div>
+  </div>
+  <div class="pane">
+    <div class="title"><h2>Cross-section · where each kind of traffic is stopped</h2><small id="sectionSub"></small></div>
+    <div id="section"></div>
+    <div class="title" style="padding-top:0;padding-bottom:8px"><h2>Tripwire · decoy rooms</h2><small>nothing legitimate enters one; a hit is a confirmed incident</small></div>
+    <div class="rooms" id="rooms"></div>
+  </div>
+</main>
+<footer>
+  <div class="kpi"><span>Posture</span><b id="kPosture">–</b></div>
+  <div class="kpi"><span>Attacks stopped</span><b id="kProt">–</b></div>
+  <div class="kpi"><span>Legit requests stopped</span><b id="kFric">–</b></div>
+  <div class="kpi"><span>Rewrites stopped</span><b id="kEva">–</b></div>
+  <div class="kpi"><span>In-layer p95</span><b id="kLat">–</b></div>
+  <div class="kpi"><span>Decoy incidents</span><b id="kInc">–</b></div>
+  <div id="tape"></div>
+</footer>
+<script>
+const $=id=>document.getElementById(id), TAU=Math.PI*2;
+const css=n=>getComputedStyle(document.documentElement).getPropertyValue(n).trim();
+const C={ring:css('--ring'),good:css('--good'),bad:css('--bad'),warn:css('--warn'),legit:css('--legit'),decoy:css('--decoy'),mute:css('--mute'),dim:css('--dim'),text:css('--text'),line:css('--line2')};
+const SHORT={prompt_injection:'Injection',data_exfiltration:'Exfiltration',confidential_output:'Confidential',harmful_request:'Harmful',off_policy_use:'Off-policy',tool_access:'Tool access',pii_model:'Privacy model',signatures:'Signatures',budget:'Budgets',models:'Models',auth:'Identity',secrets:'Secrets',pii:'PII'};
+const DIRS=[['input','Prompt','app → model'],['tool_call','Tool call','agent → tool'],['output','Model reply','model → app'],['tool_result','Tool result','tool → agent'],['tool_description','Tool listing','MCP → agent']];
+const esc=s=>String(s??'').replace(/[&<>"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
+const pct=x=>x==null?'–':(x*100).toFixed(0)+'%';
+const hhmm=t=>new Date(t*1000).toLocaleTimeString([], {hour:'2-digit',minute:'2-digit',second:'2-digit',hour12:false});
+let S=null, queue=[], qi=0, seen={alerts:new Set(),traffic:new Set(),change:null,first:true}, tape=[];
+let flash={}, coreFlash=0, coreGood=0, mines={};
+
+/* ---------- radar ---------- */
+const rc=$('radar'), rx=rc.getContext('2d'); let RW=0,RH=0,cx=0,cy=0,R=0, parts=[];
+function sizeCanvas(c,ctx){const r=c.getBoundingClientRect(),d=window.devicePixelRatio||1;c.width=r.width*d;c.height=r.height*d;ctx.setTransform(d,0,0,d,0,0);return r}
+function layout(){const r=sizeCanvas(rc,rx);RW=r.width;RH=r.height;cx=RW/2;cy=RH/2+4;R=Math.min(RW,RH)/2-40;sizeCanvas(sc,sx)}
+const ringR=i=>R*(1-0.135*i), coreR=()=>R*0.27;
+function segSpan(i,j,n){const a0=-Math.PI/2+i*0.42, w=TAU/n, gap=n>1?0.05:0.02;return [a0+j*w+gap,a0+(j+1)*w-gap]}
+function segOf(i,id){const segs=S.rings[i].segments, j=Math.max(0,segs.findIndex(s=>s.id===id));return [j,segs.length,segs[j]]}
+function spawn(o,label){
+  if(!S||!R)return;
+  let ang;
+  if(!o.attack&&!o.stopped) ang=Math.random()*TAU;
+  else{const [j,n]=segOf(o.ring,o.seg),[a,b]=segSpan(o.ring,j,n);ang=a+Math.random()*(b-a)}
+  parts.push({ang,r:R*1.13,stop:o.stopped?ringR(o.ring):coreR()*0.8,o,label,v:R*(0.55+Math.random()*0.25),dead:0});
+}
+function drawRadar(dt){
+  rx.clearRect(0,0,RW,RH); if(!S)return;
+  rx.lineWidth=1; rx.strokeStyle='rgba(38,50,67,.55)';
+  for(let k=0;k<12;k++){const a=k*TAU/12;rx.beginPath();rx.moveTo(cx+Math.cos(a)*coreR(),cy+Math.sin(a)*coreR());rx.lineTo(cx+Math.cos(a)*R*1.06,cy+Math.sin(a)*R*1.06);rx.stroke()}
+  S.rings.forEach((ring,i)=>{
+    const r=ringR(i);
+    ring.segments.forEach((s,j)=>{
+      const [a,b]=segSpan(i,j,ring.segments.length), key=i+':'+s.id, f=flash[key]||0;
+      rx.beginPath();rx.arc(cx,cy,r,a,b);
+      if(s.state==='active'){rx.setLineDash([]);rx.lineWidth=7+f*4;rx.strokeStyle=`rgba(${63+f*120},${167+f*70},${201+f*40},${0.62+f*0.38})`;rx.shadowColor=C.ring;rx.shadowBlur=6+f*18}
+      else if(s.state==='monitor'){rx.setLineDash([7,6]);rx.lineWidth=4;rx.strokeStyle='rgba(242,181,74,.85)';rx.shadowBlur=0}
+      else if(s.state==='shadow'){rx.setLineDash([2,6]);rx.lineWidth=3;rx.strokeStyle='rgba(127,140,160,.7)';rx.shadowBlur=0}
+      else{rx.setLineDash([2,9]);rx.lineWidth=2;rx.strokeStyle='rgba(255,77,94,.8)';rx.shadowBlur=0}
+      rx.stroke();rx.setLineDash([]);rx.shadowBlur=0;
+      if(f>0)flash[key]=Math.max(0,f-dt*2.2);
+      const m=(a+b)/2, lr=r+13, x=cx+Math.cos(m)*lr, y=cy+Math.sin(m)*lr;
+      rx.font='600 10.5px '+css('--sans');rx.textAlign='center';rx.textBaseline='middle';
+      const txt=(SHORT[s.id]||s.label).toUpperCase()+(s.state==='off'?' · OFF':s.state==='monitor'?' · LOG ONLY':s.state==='shadow'?' · SHADOW':'');
+      const w=rx.measureText(txt).width+10;rx.fillStyle='rgba(7,10,15,.82)';rx.fillRect(x-w/2,y-8,w,16);
+      rx.fillStyle=s.state==='active'?'#a9dcec':s.state==='off'?C.bad:s.state==='monitor'?C.warn:C.mute;rx.fillText(txt,x,y);
+    });
+  });
+  /* decoys: an orbit of mines just inside the signature ring */
+  const mr=(ringR(2)+ringR(3))/2;
+  rx.setLineDash([1,7]);rx.strokeStyle='rgba(192,139,255,.35)';rx.lineWidth=1;rx.beginPath();rx.arc(cx,cy,mr,0,TAU);rx.stroke();rx.setLineDash([]);
+  S.decoys.forEach((d,k)=>{
+    const a=-Math.PI/2+0.6+k*TAU/S.decoys.length, x=cx+Math.cos(a)*mr, y=cy+Math.sin(a)*mr, f=mines[d.id]||0;
+    if(f>0){rx.beginPath();rx.arc(x,y,8+(1-f)*46,0,TAU);rx.strokeStyle=`rgba(192,139,255,${f})`;rx.lineWidth=2;rx.stroke();mines[d.id]=Math.max(0,f-dt*0.7)}
+    rx.save();rx.translate(x,y);rx.rotate(Math.PI/4);rx.fillStyle=d.trips?C.decoy:'rgba(192,139,255,.55)';rx.shadowColor=C.decoy;rx.shadowBlur=d.trips?12:0;rx.fillRect(-5,-5,10,10);rx.restore();rx.shadowBlur=0;
+  });
+  /* particles */
+  for(const p of parts){
+    if(!p.dead){p.r-=p.v*dt; if(p.r<=p.stop){p.r=p.stop;p.dead=1;land(p)}}
+    else p.dead+=dt;
+    const x=cx+Math.cos(p.ang)*p.r, y=cy+Math.sin(p.ang)*p.r, o=p.o;
+    if(!p.dead){
+      const col=o.attack?C.bad:C.legit, tx=cx+Math.cos(p.ang)*(p.r+16), ty=cy+Math.sin(p.ang)*(p.r+16);
+      rx.strokeStyle=col;rx.globalAlpha=.35;rx.lineWidth=1.5;rx.beginPath();rx.moveTo(tx,ty);rx.lineTo(x,y);rx.stroke();rx.globalAlpha=1;
+      rx.fillStyle=col;rx.beginPath();rx.arc(x,y,p.label?4.5:o.rewrite?1.8:2.6,0,TAU);rx.fill();
+      if(p.label){rx.font='600 11px '+css('--mono');rx.textAlign='left';rx.fillStyle=C.text;rx.fillText(p.label,x+9,y)}
+    }else if(p.dead<0.5&&o.stopped){
+      const k=p.dead/0.5;rx.strokeStyle=o.attack?C.good:C.warn;rx.globalAlpha=1-k;rx.lineWidth=2;rx.beginPath();rx.arc(x,y,3+k*10,0,TAU);rx.stroke();rx.globalAlpha=1;
+      if(p.label&&p.dead<0.5){rx.font='600 11px '+css('--mono');rx.textAlign='left';rx.fillStyle=C.text;rx.fillText(p.label,x+9,y)}
+    }
+  }
+  parts=parts.filter(p=>p.dead<(p.label?1.6:0.5));
+  /* core */
+  const cr=coreR();
+  if(coreFlash>0){rx.beginPath();rx.arc(cx,cy,cr+(1-coreFlash)*30,0,TAU);rx.strokeStyle=`rgba(255,77,94,${coreFlash})`;rx.lineWidth=3;rx.stroke();coreFlash=Math.max(0,coreFlash-dt*1.6)}
+  rx.beginPath();rx.arc(cx,cy,cr,0,TAU);rx.fillStyle='#0a0f16';rx.fill();rx.lineWidth=1.5;
+  rx.strokeStyle=coreFlash>0?C.bad:coreGood>0?'rgba(110,168,255,.9)':'rgba(63,167,201,.5)';rx.stroke();coreGood=Math.max(0,coreGood-dt*3);
+  const p=S.kpi.posture;
+  rx.textAlign='center';rx.textBaseline='middle';rx.fillStyle=p==null?C.mute:p>=90?C.good:p>=70?C.warn:C.bad;
+  rx.font=`700 ${Math.round(cr*0.62)}px `+css('--mono');rx.fillText(p==null?'–':p.toFixed(1),cx,cy-cr*0.06);
+  rx.font='600 10px '+css('--sans');rx.fillStyle=C.mute;rx.fillText('POSTURE  ·  MODELS · TOOLS · DATA',cx,cy+cr*0.46);
+}
+function land(p){
+  const o=p.o;
+  if(o.stopped){flash[o.ring+':'+o.seg]=1; cellFlash(o.ring,o.direction,o.attack?'hit':'fp')}
+  else if(o.attack){coreFlash=1; cellFlash('vault',o.direction,'breach')}
+  else coreGood=1;
+}
+
+/* ---------- cross-section ---------- */
+const sc=document.createElement('canvas'), sx=sc.getContext('2d'); sc.id='sectionFx'; let sparts=[];
+function buildSection(){
+  const el=$('section'); let h='<div class="head" style="border-right:1px solid var(--line2)"><b>PIPELINE</b>evaluated top to bottom</div>';
+  h+=DIRS.map(d=>`<div class="head"><b>${d[1]}</b>${d[2]}</div>`).join('');
+  S.rings.forEach((ring,i)=>{
+    h+=`<div class="floor"><b>${esc(ring.label)}</b><div class="chips">${ring.segments.map(s=>`<span class="chip ${s.state}">${esc(SHORT[s.id]||s.label)}</span>`).join('')}</div></div>`;
+    h+=DIRS.map(d=>`<div class="cell" id="c-${i}-${d[0]}"></div>`).join('');
+  });
+  h+='<div class="floor vault"><b>Vault</b><small>models · MCP tools · company data</small></div>'+DIRS.map(d=>`<div class="cell vault" id="c-vault-${d[0]}"></div>`).join('');
+  el.innerHTML=h; el.appendChild(sc); layout(); fillCells();
+}
+function fillCells(){
+  const n={};
+  for(const o of S.outcomes){if(o.rewrite)continue;const k=(o.stopped?o.ring:'vault')+'-'+o.direction, t=n[k]||(n[k]={a:0,b:0});o.attack?t.a++:t.b++}
+  S.rings.forEach((_,i)=>DIRS.forEach(d=>{const t=n[i+'-'+d[0]], e=$(`c-${i}-${d[0]}`);if(e)e.innerHTML=t?(t.a?`<span class="g">${t.a}</span>`:'')+(t.b?`<span class="a">${t.b}</span>`:''):'<span class="z">·</span>'}));
+  DIRS.forEach(d=>{const t=n['vault-'+d[0]], e=$('c-vault-'+d[0]);if(e)e.innerHTML=t?(t.b?`<span class="l">${t.b}</span>`:'')+(t.a?`<span class="r">${t.a}</span>`:''):'<span class="z">·</span>'});
+  $('sectionSub').innerHTML='<span class="g">■</span> attacks stopped  <span class="a">■</span> legit stopped  <span class="l">■</span> delivered  <span class="r">■</span> attacks delivered';
+}
+function cellFlash(row,dir,cls){const e=$(`c-${row}-${dir}`);if(!e)return;e.classList.add(cls);setTimeout(()=>e.classList.remove(cls),120)}
+function spawnSection(o){
+  const top=$('section').getBoundingClientRect(), tgt=$(`c-${o.stopped?o.ring:'vault'}-${o.direction}`), first=$(`c-0-${o.direction}`); if(!tgt||!first)return;
+  const t=tgt.getBoundingClientRect(), f=first.getBoundingClientRect();
+  sparts.push({x:f.left-top.left+f.width*(0.2+Math.random()*0.6),y:f.top-top.top-10,ty:t.top-top.top+t.height/2,o,v:top.height*(0.5+Math.random()*0.2)});
+}
+function drawSection(dt){
+  const r=sc.getBoundingClientRect(); sx.clearRect(0,0,r.width,r.height);
+  for(const p of sparts){p.y+=p.v*dt;const col=p.o.attack?C.bad:C.legit;sx.strokeStyle=col;sx.globalAlpha=.3;sx.lineWidth=1.5;sx.beginPath();sx.moveTo(p.x,p.y-14);sx.lineTo(p.x,p.y);sx.stroke();sx.globalAlpha=1;sx.fillStyle=col;sx.beginPath();sx.arc(p.x,p.y,p.o.rewrite?1.8:2.6,0,TAU);sx.fill()}
+  sparts=sparts.filter(p=>p.y<p.ty);
+}
+
+/* ---------- rooms, KPIs, tape ---------- */
+function renderRooms(){
+  $('rooms').innerHTML=S.decoys.map(d=>`<div class="room ${d.trips?'tripped':''}" id="room-${esc(d.id)}"><i class="lamp"></i><b title="${esc(d.label)}">${esc(d.label)}</b><span>${esc(d.class)} · ${d.trips?`<b style="display:inline;color:#e3ccff">${d.trips} hit${d.trips>1?'s':''}, last ${esc(d.last.principal)}</b>`:'armed'}</span></div>`).join('');
+}
+function renderKpi(){
+  const k=S.kpi, col=k.posture==null?'':k.posture>=90?'g':k.posture>=70?'a':'r';
+  $('kPosture').innerHTML=`<span class="${col}">${k.posture??'–'}</span><small>/100</small>`;
+  $('kProt').innerHTML=k.attacks?`${k.attacks.stopped}<small>/ ${k.attacks.total}</small>`:'–';
+  $('kFric').innerHTML=k.benign?`<span class="${k.benign.stopped?'a':''}">${k.benign.stopped}</span><small>/ ${k.benign.total}</small>`:'–';
+  $('kEva').textContent=pct(k.evasion);
+  $('kLat').innerHTML=k.latency_ms?`${k.latency_ms.p95}<small>ms</small>`:'–';
+  $('kInc').innerHTML=`<span class="${k.incidents?'r':''}">${k.incidents}</span>`;
+  const t=S.target;
+  $('meta').textContent=t.error?`${t.name}: ${t.error}`:`${t.name}  ·  policy ${t.policy}  ·  feed ${t.feed}  ·  semantic: ${t.semantic}`+(t.policy_error?'  ·  LAST EDIT REJECTED: '+t.policy_error:'');
+  $('live').className='live'+(t.error?' off':''); $('runNo').textContent=`run ${S.run} · ${k.cases||0} payloads in ${k.seconds??'–'}s`;
+}
+function say(html){tape.unshift(html);tape=tape.slice(0,3);$('tape').innerHTML=tape.map(x=>`<div>${x}</div>`).join('')}
+function callout(html,cls){const c=$('callouts'),d=document.createElement('div');d.className='callout '+(cls||'');d.innerHTML=html;c.prepend(d);while(c.children.length>4)c.lastChild.remove();setTimeout(()=>d.remove(),14000)}
+function banner(ch){
+  const d=(ch.after??0)-(ch.before??0), b=$('banner'), cats=Object.entries(ch.by_category).map(([k,v])=>`${v} ${k.replace(/_/g,' ')}`).join(', ');
+  const cause=(ch.cause||[]).join(', ').replace(/_/g,' ')||'configuration';
+  b.className=d<0?'':'good';
+  b.innerHTML=`<b class="${d<0?'r':'g'}">${d>0?'+':''}${d.toFixed(1)}</b>posture ${ch.before} → ${ch.after}${ch.opened?` · <span class="r">${ch.opened} attacks opened</span>`:''}${ch.closed?` · <span class="g">${ch.closed} closed</span>`:''}${ch.new_false_positives?` · <span class="a">${ch.new_false_positives} new false positives</span>`:''}<div class="why">${esc(cause)} changed at ${hhmm(ch.ts)}${cats?' · now getting through: '+esc(cats):''}</div>`;
+  b.style.display='block'; layout(); clearTimeout(banner.t); banner.t=setTimeout(()=>{b.style.display='none';layout()},20000);
+  say(`${hhmm(ch.ts)}  ${esc(cause)} changed  posture ${ch.before} → ${ch.after}  opened ${ch.opened}  closed ${ch.closed}`);
+}
+
+/* ---------- data ---------- */
+function shuffle(a){for(let i=a.length-1;i>0;i--){const j=Math.random()*(i+1)|0;[a[i],a[j]]=[a[j],a[i]]}return a}
+let ringSig='', runSeen=-1;
+async function poll(){
+  let s; try{s=await (await fetch('/api/stage')).json()}catch(e){$('live').className='live off';return}
+  S=s;
+  const sig=JSON.stringify(s.rings); if(sig!==ringSig){ringSig=sig;buildSection()}
+  if(s.run!==runSeen){runSeen=s.run;queue=shuffle(s.outcomes.slice());qi=0;fillCells()}
+  renderKpi(); renderRooms();
+  if(s.change&&s.change.ts!==seen.change){if((!seen.first||s.now-s.change.ts<45)&&(s.change.opened||s.change.closed||s.change.new_false_positives||s.change.before!==s.change.after))banner(s.change);seen.change=s.change.ts}
+  for(const a of s.alerts.slice().reverse()){const id=a.request_id+a.sig_id;if(seen.alerts.has(id))continue;seen.alerts.add(id);if(seen.first)continue;
+    mines[a.decoy]=1;const room=$('room-'+a.decoy);if(room){room.classList.remove('flash');void room.offsetWidth;room.classList.add('flash')}
+    callout(`<b>${esc(a.principal)}</b> tripped <b>${esc(a.label)}</b><div class="t">${hhmm(a.ts)} · ${esc(a.direction)}${a.tool?' · '+esc(a.tool):''} · ${esc(a.team)}/${esc(a.role)} · ${esc(a.action)}</div>`);
+    say(`${hhmm(a.ts)}  DECOY  ${esc(a.principal)} tripped "${esc(a.label)}" via ${esc(a.direction)}`)}
+  for(const t of s.traffic.slice().reverse()){if(seen.traffic.has(t.id))continue;seen.traffic.add(t.id);if(seen.first)continue;
+    const o={attack:t.stopped,stopped:t.stopped,ring:t.ring,seg:t.seg,direction:t.direction,rewrite:false};spawn(o,t.principal);spawnSection(o);
+    if(!t.trip)say(`${hhmm(t.ts)}  LIVE  ${esc(t.principal)}  ${esc(t.direction)}  ${esc(t.action)}${t.stopped?' by '+esc(SHORT[t.seg]||t.seg):''}`)}
+  seen.first=false;
+}
+let last=performance.now(), acc=0;
+function frame(now){
+  const dt=Math.min(0.05,(now-last)/1000); last=now; acc+=dt;
+  while(acc>0.075&&queue.length){acc-=0.075;const o=queue[qi++%queue.length];spawn(o);spawnSection(o)}
+  drawRadar(dt); drawSection(dt); requestAnimationFrame(frame);
+}
+$('fire').onclick=async()=>{$('fire').disabled=true;try{await fetch('/api/run',{method:'POST'})}finally{$('fire').disabled=false;poll()}};
+addEventListener('resize',layout);
+addEventListener('keydown',e=>{if(e.key==='f')document.documentElement.requestFullscreen?.()});
+say('watching the policy file and the signature feed · edit either one and the impact shows here');
+poll().then(()=>{layout();requestAnimationFrame(frame)}); setInterval(poll,1500);
+</script>
+</body>
+</html>

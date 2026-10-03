@@ -11,7 +11,7 @@ shpont_probe/
     mutate.py    evasion rewrites
     feedcheck.py signature feed self-test
   tripwire/      tokens -> registry -> detector | feed | plant | drills | alerts
-  server/        FastAPI app, dashboard, Markdown report
+  server/        FastAPI app, stage view (stage.py maps findings to rings), detail dashboard, Markdown report
   config.py      probe.yaml
   cli.py         serve | run | feed | tokens | plant
 corpus/          attacks/*.yaml, benign/*.yaml
