@@ -1,11 +1,13 @@
 # Shpont Shield Redteam
 
-Two modules that sit next to an AI control layer and answer the two questions a message filter cannot:
+Modules that sit next to an AI control layer and answer the questions a message filter cannot. The first two are the core:
 
 - **Poligon**: *how good is the control layer right now, and what did my last config edit just open?*
   It fires a corpus of attacks and legitimate requests at the live layer, continuously, and turns the result into a measured posture score. When the policy or the signature feed changes, it re-fires within seconds and lists the attacks the change let through.
 - **Tripwire**: *is someone inside already misusing access?*
   It plants decoys: credentials, records and resources that belong to nobody. Nothing legitimate ever touches one, so a hit is a confirmed incident with a name on it. No model, no threshold, no false positives.
+
+Around them: **Referee** (the same corpus against every control layer the team built), **Data trail** (customer data an agent read, stopped when another agent tries to send it out), **Memory guard** (what agents keep in long-term memory), **Reach map** (who could leak data if one instruction were planted), **What-if** (a settings change previewed on a sandboxed copy) and **Autopatch** (rules written from attacks that got through, proven before they are offered).
 
 Built against [Shpont-Shield](https://github.com/HackNuggets2026/Shpont-Shield) and needs **no change in its code**: Poligon drives the gateway's admin API, Tripwire publishes its decoys through the signature feed the gateway already consumes.
 
@@ -32,7 +34,7 @@ flowchart LR
   P & A --> UI
 ```
 
-## Three more modules
+## Fixing what Poligon finds
 
 - **Reach map** (`shield_redteam/reach/`). Reads people, agents, role tool permissions, resource entitlements and agent grants from Shield and finds identities that hold three capabilities at once: reading private data, taking in content written by outsiders, and sending data out. That combination is what turns one planted instruction into a data leak. For each, it names the capability with the fewest sources and ranks single changes (a tool removed from a role, a grant revoked) by how many combinations they break. `GET /api/reach`.
 - **What-if** (`shield_redteam/whatif/`). Runs a private copy of Shield (same code, candidate policy, no live traffic) and replays both the corpus and recent real requests through the current and the candidate configuration. Shows the score change, the attacks a change would open or close, and which real people's requests would now be blocked. `POST /api/whatif`, then `POST /api/whatif/apply` to write the change to the live policy file. Real requests are replayed unmasked only when the policy keeps raw audit text (`plant --record-raw`, demo only); otherwise masked text is replayed.
@@ -52,18 +54,24 @@ Detectors recognise card numbers and keys, not a customer's name or a contract n
 
 ## The dashboard
 
-`/` is a React app (`web/`: React, TypeScript, Tailwind, shadcn/ui, Recharts) with a left navigation, light and dark themes, and five sections. Every block is titled with the question it answers and is drawn from the live layer. The built bundle ships inside the Python package, so there is no Node at runtime.
+`/` is a React app (`web/`: React, TypeScript, Tailwind, shadcn/ui, Recharts, Animate UI and Magic UI for motion) with light and dark themes. The left navigation groups twelve tabs by what they are for. Every block is titled with the question it answers and is drawn from the live layer. The built bundle ships inside the Python package, so there is no Node at runtime.
 
-| Section | Shows | Wired to |
+| Tab | Shows | Wired to |
 |---|---|---|
+| **Start here** | what the project is and what this repository adds, every tab in one line, a two-minute demo path; Polish and English | live numbers from the other tabs |
 | **Overview** | four key numbers; the score ring; a pipeline drawing (attacks and normal requests pass five stages; each lane narrows by what a stage caught, and the safeguards under each stage are switches); score per run with a dot on every settings change and a change log that opens the affected attacks; live test messages | the last corpus run and Poligon's change log; clicking a safeguard under a stage switches it off |
-| **Safeguards** | every control grouped by stage, with a switch and a stopped / got-through bar | the switch flips `enabled` in Shield's real policy file, the corpus is re-fired, a toast offers undo |
+| ***Find holes*** | | |
 | **Attacks** | coverage map (attack type by channel), disguise radar, filterable lists of attacks that pass, wrong blocks and evasions, with a detail drawer per case | per-case outcomes and evasion mutants |
-| **Traps** | one card per Tripwire decoy with "Simulate theft", and an incident timeline naming who used it | a real request with an agent key, then Shield's audit trail |
+| **Safeguards** | every control grouped by stage, with a switch and a stopped / got-through bar | the switch flips `enabled` in Shield's real policy file, the corpus is re-fired, a toast offers undo |
 | **Playground** | write any message, pick the channel, see which safeguard reacted and how fast | the live layer, unmetered |
-| **Reach map** | who can reach what, the identities holding all three dangerous capabilities, and the single changes that break them | Shield's identities, roles, entitlements and grants |
+| **Referee** | one card per team gateway (score, attacks stopped, wrong blocks, disguised attacks stopped, latency), share stopped per attack class, the best gateway per class and attacks none of them stops | the four gateways listed under `referee.gateways` |
+| ***Catch leaks*** | | |
+| **Traps** | one card per Tripwire decoy with "Simulate theft", and an incident timeline naming who used it | a real request with an agent key, then Shield's audit trail |
+| **Data trail** | the latest stopped attempt drawn as a chain (read by, tried to leave via, blocked), earlier attempts, and the values being traced, masked; "Play a two-step leak" | real tool results and outgoing calls in Shield's audit trail |
+| **Memory guard** | memories kept per agent with source and trust, quarantined entries with a release button, a write-and-recall form, the six-scenario self-test | the memory API, with Shield inspecting outside content |
+| **Reach map** | who can reach what, the identities holding all three dangerous capabilities, and the single changes that break them | Shield's identities, roles, entitlements and grants, plus the Common-Database directory |
+| ***Fix*** | | |
 | **What-if** | draft a settings change, preview it on test attacks and real requests, then apply it | a sandboxed copy of Shield |
-| **Data trail** | each stopped attempt as a chain (read by, tried to leave via, blocked) and the values being traced, masked | real tool results and outgoing calls in Shield's audit trail |
 | **Autopatch** | proposed rules with their proof (score before and after, cases closed, legitimate requests affected), apply and revert | the sandbox, then the signature feed |
 
 `/console` shows the same data as five tabs inside the Shield security console shell: Redteam's part there is one file, `shield_redteam/server/static/console/views/redteam.js`, written against Shield's `docs/console-contract.md`. To merge into Shield: copy it into `controllayer/dashboard/views/`, add its script tag to `panel.html`, set `window.REDTEAM_API` to the Redteam service.
