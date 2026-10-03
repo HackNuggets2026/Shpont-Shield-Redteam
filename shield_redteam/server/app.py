@@ -10,27 +10,35 @@ from pathlib import Path
 from typing import Annotated, Any
 
 import httpx
-from fastapi import Body, FastAPI, Request
+from fastapi import Body, FastAPI, HTTPException, Request
 from fastapi.responses import FileResponse, JSONResponse, PlainTextResponse
 from fastapi.staticfiles import StaticFiles
 
+from ..autopatch.propose import candidates
+from ..autopatch.store import PatchStore
 from ..config import Config
+from ..core import yamlio
 from ..core.target import GatewayTarget, Target
 from ..core.types import DIRECTIONS, Case
 from ..poligon import corpus
 from ..poligon.feedcheck import check_feed
 from ..poligon.service import Poligon
+from ..reach.graph import build as build_reach
 from ..tripwire.alerts import AlertStore
 from ..tripwire.detector import Detector
 from ..tripwire.drills import drill_cases
 from ..tripwire.feed import build_feed
 from ..tripwire.registry import Registry
+from ..whatif.preview import preview
+from ..whatif.sandbox import SandboxUnavailable, apply_changes
 from .demo import NotSwitchable, set_enabled, switchable, theft_payload
 from .report import markdown
 from .stage import outcome_rows, place, rings, traffic_rows
 
 STATIC = Path(__file__).parent / "static"
 JsonBody = Annotated[dict[str, Any], Body()]
+REAL_CHANNELS = ("sdk", "chat", "mcp", "api", "anthropic")
+REAL_KEEP = 1000
 
 
 def load_base_feed(cfg: Config) -> tuple[dict[str, Any] | None, str]:
@@ -60,14 +68,29 @@ def create_app(cfg: Config, target: Target | None = None, background: bool = Tru
         workers=int(pol["workers"]),
     )
     stop = threading.Event()
+    patches = PatchStore(cfg.resolve("data/patches.json"))
+    proposals: dict[str, Any] = {"fingerprint": None, "items": [], "busy": False, "error": ""}
     policy_file = cfg.resolve(cfg.target["policy_file"]) if cfg.target["policy_file"] else None
 
     recent: dict[str, Any] = {"events": []}
+    # Real requests (not self-test), kept here because the control layer's in-memory event ring is soon
+    # filled by self-test traffic. Newest first, at most REAL_KEEP.
+    real: dict[str, dict[str, Any]] = {}
 
     def poll_alerts() -> None:
         with contextlib.suppress(Exception):
             recent["events"] = target.events(2000)
             alerts.ingest(recent["events"])
+        with contextlib.suppress(Exception):
+            for channel in REAL_CHANNELS:
+                for e in target.events(300, channel=channel):
+                    real.setdefault(str(e.get("request_id")), e)
+            if len(real) > REAL_KEEP:
+                for rid, _ in sorted(real.items(), key=lambda kv: kv[1].get("ts", 0))[: len(real) - REAL_KEEP]:
+                    real.pop(rid, None)
+
+    def real_events() -> list[dict[str, Any]]:
+        return sorted(real.values(), key=lambda e: -float(e.get("ts", 0)))
 
     def loop() -> None:
         while not stop.is_set():
@@ -108,7 +131,20 @@ def create_app(cfg: Config, target: Target | None = None, background: bool = Tru
 
     def feed() -> tuple[dict[str, Any], str]:
         base, err = load_base_feed(cfg)
-        return build_feed(base, registry), err
+        merged = build_feed(base, registry)
+        applied = patches.signatures()
+        if applied:
+            merged["signatures"] += applied
+            merged["feed_version"] += f"+patch.{len(applied)}"
+        return merged, err
+
+    def all_cases() -> list[Case]:
+        return poligon.cases
+
+    def require_policy_file() -> Path:
+        if not policy_file:
+            raise HTTPException(409, "set target.policy_file in redteam.yaml to preview or apply changes")
+        return policy_file
 
     @app.get("/feed/signatures.json")
     def feed_json():
@@ -253,6 +289,115 @@ def create_app(cfg: Config, target: Target | None = None, background: bool = Tru
         d = target.guard(key, direction, theft_payload(decoy.value), "http_get")
         poll_alerts()
         return {"action": d.action, "stopped": d.stopped, "error": d.error}
+
+    # ---- reach map ----------------------------------------------------------------------
+
+    @app.get("/api/reach")
+    def reach():
+        info = target.describe()
+        return build_reach(info.get("policy_doc") or {}, target.grants(), cfg.reach)
+
+    # ---- what-if: preview a settings change on the corpus and on real traffic -------------
+
+    @app.post("/api/whatif")
+    def whatif(body: JsonBody):
+        try:
+            return preview(
+                cfg.shield_path,
+                require_policy_file(),
+                feed()[0],
+                all_cases(),
+                real_events(),
+                changes=list(body.get("changes") or []),
+            )
+        except (SandboxUnavailable, KeyError) as e:
+            raise HTTPException(400, str(e)) from e
+
+    @app.post("/api/whatif/apply")
+    def whatif_apply(body: JsonBody):
+        path = require_policy_file()
+        doc = yamlio.load(path)
+        try:
+            apply_changes(doc, list(body.get("changes") or []))
+        except KeyError as e:
+            raise HTTPException(400, str(e)) from e
+        yamlio.write_atomic(path, doc)
+        with contextlib.suppress(Exception):
+            target.reload()
+        poligon.tick()
+        return {"ok": True}
+
+    # ---- autopatch: proposals proven in a sandbox, applied through the feed ----------------
+
+    def compute_proposals() -> None:
+        rep = poligon.last_report
+        try:
+            if not rep or not policy_file:
+                proposals["items"], proposals["error"] = [], "" if rep else "waiting for the first run"
+                return
+            by_id = {c.id: c for c in all_cases()}
+            opened = [by_id[o["id"]] for o in rep["open_attacks"] if o["id"] in by_id]
+            base = [c for c in all_cases() if not c.parent]
+            cands = candidates(opened, [c for c in base if not c.must_stop], [c for c in base if c.must_stop])
+            items = []
+            for sig in cands:
+                proof = preview(
+                    cfg.shield_path, policy_file, feed()[0], all_cases(), real_events(), extra_signatures=[sig]
+                )
+                closed = [o["id"] for o in proof["impact"]["closed"]]
+                new_fp = proof["impact"]["new_false_positives"] + proof["traffic"]["newly_stopped"]
+                items.append(
+                    {
+                        "signature": sig,
+                        "case": sig["case"],
+                        "before": proof["before"]["posture"],
+                        "after": proof["after"]["posture"],
+                        "closed": closed,
+                        "new_false_positives": len(new_fp),
+                        "proven": sig["case"] in closed and not new_fp,
+                        "real_requests_checked": proof["traffic"]["replayed"],
+                    }
+                )
+            proposals["items"], proposals["error"] = items, ""
+        except Exception as e:  # noqa: BLE001 - shown on the page, never fatal
+            proposals["items"], proposals["error"] = [], f"{type(e).__name__}: {e}"
+        finally:
+            proposals["fingerprint"] = rep and rep["fingerprint"]
+            proposals["busy"] = False
+
+    @app.get("/api/patches")
+    def patches_state():
+        rep = poligon.last_report
+        if rep and proposals["fingerprint"] != rep["fingerprint"] and not proposals["busy"]:
+            proposals["busy"] = True
+            threading.Thread(target=compute_proposals, daemon=True).start()
+        applied = {p["signature"]["id"] for p in patches.all()}
+        return {
+            "busy": proposals["busy"],
+            "error": proposals["error"],
+            "applied": patches.all(),
+            "proposals": [p for p in proposals["items"] if p["signature"]["id"] not in applied],
+        }
+
+    @app.post("/api/patches/apply")
+    def patch_apply(body: JsonBody):
+        item = next((p for p in proposals["items"] if p["signature"]["id"] == body.get("id")), None)
+        if item is None:
+            raise HTTPException(404, "no such proposal; refresh the list")
+        if not item["proven"] and not body.get("force"):
+            raise HTTPException(
+                409, "this patch is not proven; it would block legitimate requests or does not close its case"
+            )
+        patches.add(item["signature"], {k: v for k, v in item.items() if k != "signature"})
+        proposals["fingerprint"] = None
+        return {"ok": True}
+
+    @app.post("/api/patches/revert")
+    def patch_revert(body: JsonBody):
+        if not patches.remove(str(body.get("id"))):
+            raise HTTPException(404, "no such applied patch")
+        proposals["fingerprint"] = None
+        return {"ok": True}
 
     @app.post("/api/run")
     def run_now():

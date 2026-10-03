@@ -82,3 +82,46 @@ export const useRetest = () => useAction(() => post<Report>("/api/run"))
 export const useSwitch = () => useAction((a: { id: string; enabled: boolean }) => post<{ ok: boolean }>("/api/control", a))
 export const useSteal = () => useAction((decoy: string) => post<{ action: string; stopped: boolean }>("/api/steal", { decoy }))
 export const tryMessage = (text: string, direction: string) => post<Verdict>("/api/try", { text, direction })
+
+// ---- reach map, what-if, autopatch ---------------------------------------------------------
+
+export type Leg = "private" | "untrusted" | "egress"
+export interface ReachSource { kind: "tool" | "resource"; id: string; via: string; key: string }
+export interface ReachIdentity {
+  id: string; kind: string; team: string; role: string; owner: string | null; trifecta: boolean
+  weakest: Leg | null; legs: Record<Leg, ReachSource[]>
+}
+export interface ReachFix { key: string; kind: string; id: string; via: string; leg: Leg; fixes: string[]; affects: string[]; change: string }
+export interface ReachNode { id: string; col: 0 | 1 | 2; label: string; kind: string; trifecta?: boolean; sub?: string; legs?: Leg[] }
+export interface Reach {
+  identities: ReachIdentity[]; flagged: string[]; fixes: ReachFix[]; legs: Record<Leg, string>
+  graph: { nodes: ReachNode[]; edges: { from: string; to: string; via: string[] }[] }
+}
+export const useReach = () => useQuery({ queryKey: ["reach"], queryFn: () => get<Reach>("/api/reach"), refetchInterval: 5000 })
+
+export interface ChangeSpec { control: string; enabled?: boolean; mode?: string }
+export interface Flip { principal: string; direction: string; text: string; masked: boolean; before: string; after: string; by: string[] }
+export interface Summary { posture: number | null; protection: number | null; friction: number | null; evasion: number | null; attacks: { total: number; stopped: number }; benign: { total: number; stopped: number } }
+export interface Preview {
+  changes: ChangeSpec[]; before: Summary; after: Summary
+  impact: { opened: CaseRow[]; closed: CaseRow[]; new_false_positives: CaseRow[]; fixed_false_positives: CaseRow[]; opened_by_category: Record<string, number> }
+  traffic: { replayed: number; masked: number; newly_stopped: Flip[]; newly_allowed: Flip[] }
+}
+export const previewChanges = (changes: ChangeSpec[]) => post<Preview>("/api/whatif", { changes })
+export const useApplyChanges = () => useAction((changes: ChangeSpec[]) => post<{ ok: boolean }>("/api/whatif/apply", { changes }))
+
+export interface Signature { id: string; name: string; pattern: string; category: string; directions: string[]; case?: string; tests?: { match: string[] } }
+export interface Proposal {
+  signature: Signature; case: string; before: number | null; after: number | null; closed: string[]
+  new_false_positives: number; proven: boolean; real_requests_checked: number
+}
+export interface Patches { busy: boolean; error: string; proposals: Proposal[]; applied: { signature: Signature; evidence: Partial<Proposal>; applied_at: number }[] }
+export const usePatches = () => useQuery({ queryKey: ["patches"], queryFn: () => get<Patches>("/api/patches"), refetchInterval: 2500 })
+export const useApplyPatch = () => {
+  const qc = useQueryClient()
+  return useMutation({ mutationFn: (id: string) => post<{ ok: boolean }>("/api/patches/apply", { id }), onSettled: () => qc.invalidateQueries() })
+}
+export const useRevertPatch = () => {
+  const qc = useQueryClient()
+  return useMutation({ mutationFn: (id: string) => post<{ ok: boolean }>("/api/patches/revert", { id }), onSettled: () => qc.invalidateQueries() })
+}

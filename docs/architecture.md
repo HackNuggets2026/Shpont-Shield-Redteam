@@ -11,6 +11,9 @@ shield_redteam/
     mutate.py    evasion rewrites
     feedcheck.py signature feed self-test
   tripwire/      tokens -> registry -> detector | feed | plant | drills | alerts
+  reach/         capability graph and single-change fixes from Shield's identities and grants
+  whatif/        sandboxed copy of Shield; preview of a change on the corpus and real requests
+  autopatch/     signatures written from open attacks, proven in the sandbox, stored for the feed
   server/        FastAPI app, console views (static/console/views/redteam.js), hands-on actions, Markdown report
   config.py      redteam.yaml
   cli.py         serve | run | feed | tokens | plant

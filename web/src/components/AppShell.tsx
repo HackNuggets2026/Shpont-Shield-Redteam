@@ -1,4 +1,4 @@
-import { Crosshair, FlaskConical, LayoutDashboard, Moon, RefreshCw, ShieldCheck, Siren, Sun, Swords } from "lucide-react"
+import { Crosshair, FlaskConical, GitCompareArrows, LayoutDashboard, Moon, Network, RefreshCw, ShieldCheck, Siren, Sun, Swords, Wand2 } from "lucide-react"
 import type { ReactNode } from "react"
 import { NavLink, useLocation } from "react-router-dom"
 import { toast } from "sonner"
@@ -14,6 +14,9 @@ const NAV = [
   { to: "/safeguards", label: "Safeguards", icon: ShieldCheck },
   { to: "/attacks", label: "Attacks", icon: Swords },
   { to: "/traps", label: "Traps", icon: Siren },
+  { to: "/reach", label: "Reach map", icon: Network },
+  { to: "/whatif", label: "What-if", icon: GitCompareArrows },
+  { to: "/autopatch", label: "Autopatch", icon: Wand2 },
   { to: "/playground", label: "Playground", icon: FlaskConical },
 ]
 const TITLE: Record<string, [string, string]> = {
@@ -22,6 +25,9 @@ const TITLE: Record<string, [string, string]> = {
   "/attacks": ["Attacks", "What gets through, and how attackers disguise it"],
   "/traps": ["Traps", "Fake secrets that expose whoever uses them"],
   "/playground": ["Playground", "Send your own message through the firewall"],
+  "/reach": ["Reach map", "Who could move private data out if one instruction were planted"],
+  "/whatif": ["What-if", "Preview a settings change before it reaches the live firewall"],
+  "/autopatch": ["Autopatch", "Rules written from attacks that got through, proven before they are offered"],
 }
 
 export function AppShell({ state, stage, children }: { state?: State; stage?: Stage; children: ReactNode }) {

@@ -91,8 +91,17 @@ class GatewayTarget:
             "policy_doc": self._policy_doc(),
         }
 
-    def events(self, limit: int = 200) -> list[dict[str, Any]]:
-        return self.http.get("/admin/events", params={"limit": limit}).json()
+    def events(self, limit: int = 200, channel: str | None = None) -> list[dict[str, Any]]:
+        params: dict[str, Any] = {"limit": limit}
+        if channel:
+            params["channel"] = channel
+        return self.http.get("/admin/events", params=params).json()
+
+    def grants(self) -> list[dict[str, Any]]:
+        try:
+            return self.http.get("/admin/grants").json().get("grants", [])
+        except (httpx.HTTPError, ValueError):
+            return []
 
     def reload(self) -> None:
         """Ask the gateway to re-read its policy now instead of waiting for its file watcher."""
@@ -132,11 +141,15 @@ class CallableTarget:
     def describe(self) -> dict[str, Any]:
         return {"name": self.name}
 
-    def events(self, limit: int = 200) -> list[dict[str, Any]]:
-        return self.event_log[-limit:][::-1]
+    def events(self, limit: int = 200, channel: str | None = None) -> list[dict[str, Any]]:
+        rows = [e for e in self.event_log if not channel or e.get("channel") == channel]
+        return rows[-limit:][::-1]
 
     def reload(self) -> None:
         return None
+
+    def grants(self) -> list[dict[str, Any]]:
+        return []
 
     def guard(self, api_key: str, direction: str, text: str, tool: str | None = None) -> Decision:
         return self._fn(Case("guard", "attack", "live", text, direction=direction))

@@ -6,11 +6,12 @@ cd "$(dirname "$0")/.."
 SHIELD="${SHIELD_PATH:-../Shpont-Shield}"
 mkdir -p .run
 fuser -k 8799/tcp 8787/tcp 2>/dev/null || true
-.venv/bin/shield-redteam plant --policy "$SHIELD/policy.yaml" --out .run/policy.yaml
+.venv/bin/shield-redteam plant --policy "$SHIELD/policy.yaml" --out .run/policy.yaml --record-raw
 REDTEAM_POLICY_FILE="$PWD/.run/policy.yaml" BASE_FEED="$SHIELD/feeds/signatures.json" nohup .venv/bin/shield-redteam serve > .run/redteam.log 2>&1 &
 sleep 2   # the gateway loads the feed from Redteam at start-up
 (cd "$SHIELD" && nohup .venv/bin/python -m controllayer --policy "$OLDPWD/.run/policy.yaml" > "$OLDPWD/.run/shield.log" 2>&1 &)
 sleep 3
+.venv/bin/python demo/traffic.py --gateway http://127.0.0.1:8787 > .run/traffic.log 2>&1 || true
 echo "Redteam dashboard   http://127.0.0.1:8799/"
 echo "Shield dashboard  http://127.0.0.1:8787/?token=demo-admin-token"
 echo "Policy to edit    $(pwd)/.run/policy.yaml"

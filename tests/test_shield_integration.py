@@ -112,3 +112,40 @@ def test_real_use_of_a_decoy_becomes_an_attributed_alert(shield):
     store = AlertStore(registry)
     alerts = store.ingest(target.events(500))
     assert [(a["principal"], a["decoy"], a["drill"]) for a in alerts] == [("ops-agent", "ghost-project", False)]
+
+
+def test_preview_shows_the_effect_of_a_change_without_touching_the_policy(shield, tmp_path):
+    from shield_redteam.whatif.preview import preview
+
+    _, registry, policy_path, _ = shield
+    before = policy_path.read_text()
+    feed = build_feed(json.loads((SHIELD / "feeds" / "signatures.json").read_text()), registry)
+    cases = corpus.load_dir(ROOT / "corpus")
+    events = [
+        {
+            "request_id": "r1",
+            "principal": "alice",
+            "direction": "input",
+            "channel": "sdk",
+            "text": "my key is AKIAIOSFODNN7EXAMPLE",
+        }
+    ]
+    r = preview(SHIELD, policy_path, feed, cases, events, changes=[{"control": "secrets", "enabled": False}])
+    assert policy_path.read_text() == before
+    assert r["after"]["posture"] < r["before"]["posture"]
+    assert r["impact"]["opened"] and all(o["category"] == "secrets" for o in r["impact"]["opened"])
+    assert [f["principal"] for f in r["traffic"]["newly_allowed"]] == ["alice"]
+
+
+def test_a_proposed_patch_is_proven_in_the_sandbox(shield):
+    from shield_redteam.autopatch.propose import candidate
+    from shield_redteam.whatif.preview import preview
+
+    _, registry, policy_path, _ = shield
+    feed = build_feed(json.loads((SHIELD / "feeds" / "signatures.json").read_text()), registry)
+    cases = corpus.load_dir(ROOT / "corpus")
+    target_case = next(c for c in cases if c.id == "pi-polish")
+    sig = candidate(target_case, [c for c in cases if not c.must_stop])
+    r = preview(SHIELD, policy_path, feed, cases, [], extra_signatures=[sig])
+    assert "pi-polish" in [o["id"] for o in r["impact"]["closed"]]
+    assert not r["impact"]["new_false_positives"]

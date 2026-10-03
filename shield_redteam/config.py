@@ -50,6 +50,15 @@ class Config:
         return {"seed": "change-me", "decoys": [], **self.raw.get("tripwire", {})}
 
     @property
+    def shield_path(self) -> Path:
+        """A checkout of the control layer, used to run it in a sandbox for previews and patch proofs."""
+        return self.resolve(os.environ.get("SHIELD_PATH") or self.raw.get("shield_path", "../Shpont-Shield"))
+
+    @property
+    def reach(self) -> dict[str, Any]:
+        return self.raw.get("reach", {})
+
+    @property
     def server(self) -> dict[str, Any]:
         return {"host": "127.0.0.1", "port": 8799, **self.raw.get("server", {})}
 

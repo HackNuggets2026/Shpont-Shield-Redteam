@@ -102,6 +102,12 @@ def cmd_plant(args: argparse.Namespace) -> int:
     policy = yamlio.load(Path(args.policy))
     url = args.feed_url or f"http://{cfg.server['host']}:{cfg.server['port']}/feed/signatures.json"
     patched, notes = patch_policy(policy, registry, cfg.tripwire["decoys"], url, args.refresh)
+    if args.record_raw:
+        # Demo only: keep request text unmasked in the audit trail, so What-if can replay it exactly.
+        if patched.get("audit") is None:
+            patched["audit"] = {}
+        patched["audit"]["store_raw_text"] = True
+        notes.append("audit.store_raw_text -> true (demo: lets What-if replay real requests unmasked)")
     out = Path(args.out)
     out.parent.mkdir(parents=True, exist_ok=True)
     out.write_text(yamlio.dumps(patched))
@@ -132,6 +138,7 @@ def main(argv: list[str] | None = None) -> int:
     p.add_argument("--out", required=True)
     p.add_argument("--feed-url")
     p.add_argument("--refresh", type=int, default=2)
+    p.add_argument("--record-raw", action="store_true", help="demo only: keep unmasked request text for What-if")
     p.set_defaults(fn=cmd_plant)
     args = ap.parse_args(argv)
     return args.fn(args)

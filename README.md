@@ -32,6 +32,12 @@ flowchart LR
   P & A --> UI
 ```
 
+## Three more modules
+
+- **Reach map** (`shield_redteam/reach/`). Reads people, agents, role tool permissions, resource entitlements and agent grants from Shield and finds identities that hold three capabilities at once: reading private data, taking in content written by outsiders, and sending data out. That combination is what turns one planted instruction into a data leak. For each, it names the capability with the fewest sources and ranks single changes (a tool removed from a role, a grant revoked) by how many combinations they break. `GET /api/reach`.
+- **What-if** (`shield_redteam/whatif/`). Runs a private copy of Shield (same code, candidate policy, no live traffic) and replays both the corpus and recent real requests through the current and the candidate configuration. Shows the score change, the attacks a change would open or close, and which real people's requests would now be blocked. `POST /api/whatif`, then `POST /api/whatif/apply` to write the change to the live policy file. Real requests are replayed unmasked only when the policy keeps raw audit text (`plant --record-raw`, demo only); otherwise masked text is replayed.
+- **Autopatch** (`shield_redteam/autopatch/`). For every attack that gets through, writes a signature from a phrase of that attack which no legitimate test message contains, then proves it in the sandbox: it must stop the attack and block no legitimate test message or real request that was not blocked before. Proven patches are applied with one click and published through the same signature feed Shield already reads. `GET /api/patches`, `POST /api/patches/apply`, `POST /api/patches/revert`. Disguised (encoded, spaced-out) variants need input normalisation in Shield, which one pattern cannot provide.
+
 ## The dashboard
 
 `/` is a React app (`web/`: React, TypeScript, Tailwind, shadcn/ui, Recharts) with a left navigation, light and dark themes, and five sections. Every block is titled with the question it answers and is drawn from the live layer. The built bundle ships inside the Python package, so there is no Node at runtime.
@@ -43,6 +49,9 @@ flowchart LR
 | **Attacks** | coverage map (attack type by channel), disguise radar, filterable lists of attacks that pass, wrong blocks and evasions, with a detail drawer per case | per-case outcomes and evasion mutants |
 | **Traps** | one card per Tripwire decoy with "Simulate theft", and an incident timeline naming who used it | a real request with an agent key, then Shield's audit trail |
 | **Playground** | write any message, pick the channel, see which safeguard reacted and how fast | the live layer, unmetered |
+| **Reach map** | who can reach what, the identities holding all three dangerous capabilities, and the single changes that break them | Shield's identities, roles, entitlements and grants |
+| **What-if** | draft a settings change, preview it on test attacks and real requests, then apply it | a sandboxed copy of Shield |
+| **Autopatch** | proposed rules with their proof (score before and after, cases closed, legitimate requests affected), apply and revert | the sandbox, then the signature feed |
 
 `/console` shows the same data as five tabs inside the Shield security console shell: Redteam's part there is one file, `shield_redteam/server/static/console/views/redteam.js`, written against Shield's `docs/console-contract.md`. To merge into Shield: copy it into `controllayer/dashboard/views/`, add its script tag to `panel.html`, set `window.REDTEAM_API` to the Redteam service.
 

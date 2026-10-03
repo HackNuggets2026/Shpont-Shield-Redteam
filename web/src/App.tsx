@@ -5,10 +5,13 @@ import { AppShell } from "@/components/AppShell"
 import { Skeleton } from "@/components/ui/skeleton"
 import { useLive } from "@/lib/api"
 import { Attacks } from "@/pages/Attacks"
+import { Autopatch } from "@/pages/Autopatch"
 import { Overview } from "@/pages/Overview"
 import { Playground } from "@/pages/Playground"
+import { Reach } from "@/pages/Reach"
 import { Safeguards } from "@/pages/Safeguards"
 import { Traps } from "@/pages/Traps"
+import { WhatIf } from "@/pages/WhatIf"
 
 function Notice({ children }: { children: React.ReactNode }) {
   return <div className="mb-4 flex items-start gap-2 rounded-lg border border-red-500/40 bg-red-500/5 p-3 text-sm text-red-700 dark:text-red-400"><AlertTriangle className="mt-0.5 size-4 shrink-0" /><span>{children}</span></div>
@@ -31,6 +34,9 @@ export default function App() {
           <Route path="/attacks" element={<Attacks state={state} stage={stage} />} />
           <Route path="/traps" element={<Traps state={state} stage={stage} />} />
           <Route path="/playground" element={<Playground />} />
+          <Route path="/reach" element={<Reach />} />
+          <Route path="/whatif" element={<WhatIf stage={stage} />} />
+          <Route path="/autopatch" element={<Autopatch state={state} />} />
         </Routes>
       )}
     </AppShell>
