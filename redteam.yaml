@@ -51,6 +51,15 @@ tripwire:
       label: System prompt canary
       planted_in: system prompt of every company agent
 
+# --- Referee: the same corpus against every control layer the team built ----------------
+# demo/referee-up.sh starts the other three locally with their own demo policies.
+referee:
+  gateways:
+    - {name: Shield, owner: latekvo, kind: shield, url: "${SHIELD_URL:-http://127.0.0.1:8787}", token: "${ACL_ADMIN_TOKEN:-demo-admin-token}"}
+    - {name: Usage governance, owner: Mikołaj, kind: shield, url: "http://127.0.0.1:8801", token: demo-admin-token}
+    - {name: Behavior, owner: Dawid, kind: warden, url: "http://127.0.0.1:8802", token: demo-admin}
+    - {name: SzpontShield, owner: Nikodem, kind: szpont, url: "http://127.0.0.1:8803"}
+
 server:
   host: 127.0.0.1
   port: 8799

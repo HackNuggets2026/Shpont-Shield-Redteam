@@ -125,3 +125,21 @@ export const useRevertPatch = () => {
   const qc = useQueryClient()
   return useMutation({ mutationFn: (id: string) => post<{ ok: boolean }>("/api/patches/revert", { id }), onSettled: () => qc.invalidateQueries() })
 }
+
+// ---- referee ---------------------------------------------------------------------------
+
+export interface LeagueRow {
+  name: string; owner: string; url: string; kind: string; error: string; evaluated: number; errors: number
+  skipped: Record<string, number>; posture?: number | null; protection?: number | null; friction?: number | null; evasion?: number | null
+  attacks?: { total: number; stopped: number }; benign?: { total: number; stopped: number }; mutants?: { total: number; stopped: number }
+  latency_ms?: { p50: number | null; p95: number | null }; by_category?: Group[]; open?: string[]; false_positives?: string[]
+}
+export interface Referee {
+  busy: boolean; error: string; configured: { name: string; owner: string; url: string }[]
+  result: { ran_at: number; gateways: LeagueRow[]; best_by_category: { category: string; gateway: string; protection: number }[]; gaps_everywhere: string[] } | null
+}
+export const useReferee = () => useQuery({ queryKey: ["referee"], queryFn: () => get<Referee>("/api/referee"), refetchInterval: 2000 })
+export const useRunReferee = () => {
+  const qc = useQueryClient()
+  return useMutation({ mutationFn: () => post<{ ok: boolean }>("/api/referee/run"), onSettled: () => qc.invalidateQueries({ queryKey: ["referee"] }) })
+}

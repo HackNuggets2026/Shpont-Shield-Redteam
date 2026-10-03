@@ -55,6 +55,10 @@ class Config:
         return self.resolve(os.environ.get("SHIELD_PATH") or self.raw.get("shield_path", "../Shpont-Shield"))
 
     @property
+    def referee(self) -> list[dict[str, Any]]:
+        return list((self.raw.get("referee") or {}).get("gateways") or [])
+
+    @property
     def reach(self) -> dict[str, Any]:
         return self.raw.get("reach", {})
 

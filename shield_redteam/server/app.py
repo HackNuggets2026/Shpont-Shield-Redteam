@@ -24,6 +24,7 @@ from ..poligon import corpus
 from ..poligon.feedcheck import check_feed
 from ..poligon.service import Poligon
 from ..reach.graph import build as build_reach
+from ..referee.league import league
 from ..tripwire.alerts import AlertStore
 from ..tripwire.detector import Detector
 from ..tripwire.drills import drill_cases
@@ -289,6 +290,35 @@ def create_app(cfg: Config, target: Target | None = None, background: bool = Tru
         d = target.guard(key, direction, theft_payload(decoy.value), "http_get")
         poll_alerts()
         return {"action": d.action, "stopped": d.stopped, "error": d.error}
+
+    # ---- referee: one corpus, every gateway of the team ----------------------------------
+
+    referee_state: dict[str, Any] = {"busy": False, "result": None, "error": ""}
+
+    def run_referee() -> None:
+        try:
+            # Trap drills only make sense where the decoys are planted, so they are left out of the comparison.
+            cases = [c for c in poligon.cases if c.category != "tripwire"]
+            referee_state["result"] = league(cfg.referee, cases)
+            referee_state["error"] = ""
+        except Exception as e:  # noqa: BLE001 - shown on the page
+            referee_state["error"] = f"{type(e).__name__}: {e}"
+        finally:
+            referee_state["busy"] = False
+
+    @app.get("/api/referee")
+    def referee():
+        return {
+            **referee_state,
+            "configured": [{"name": g.get("name"), "owner": g.get("owner"), "url": g.get("url")} for g in cfg.referee],
+        }
+
+    @app.post("/api/referee/run")
+    def referee_run():
+        if not referee_state["busy"]:
+            referee_state["busy"] = True
+            threading.Thread(target=run_referee, daemon=True).start()
+        return {"ok": True}
 
     # ---- reach map ----------------------------------------------------------------------
 

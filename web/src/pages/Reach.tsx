@@ -165,8 +165,8 @@ export function Reach() {
                 <XAxis type="number" hide />
                 <YAxis type="category" dataKey="team" width={90} tickLine={false} axisLine={false} tick={{ fontSize: 11, fill: "var(--muted-foreground)" }} />
                 <Tooltip contentStyle={{ borderRadius: 8, fontSize: 12, background: "var(--popover)", border: "1px solid var(--border)", color: "var(--popover-foreground)" }} />
-                <Bar dataKey="people" stackId="a" fill="#a78bfa" name="people" radius={[0, 0, 0, 0]} />
-                <Bar dataKey="agents" stackId="a" fill="#ef4444" name="agents" radius={[0, 4, 4, 0]} />
+                <Bar dataKey="people" stackId="a" fill="#a78bfa" name="people" isAnimationActive={false} />
+                <Bar dataKey="agents" stackId="a" fill="#ef4444" name="agents" radius={[0, 4, 4, 0]} isAnimationActive={false} />
               </BarChart>
             </ResponsiveContainer>
           </Panel>
