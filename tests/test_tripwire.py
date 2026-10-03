@@ -227,3 +227,13 @@ def test_self_test_traffic_never_pushes_out_a_real_incident(registry):
     store.ingest([_event(f"d{i}", "alice", "TRIP-VAULT x", channel="dashboard") for i in range(50)])
     s = store.state()
     assert s["incidents"] == 1 and s["alerts"][0]["principal"] == "bob" and s["drills"] == 50
+
+
+def test_planting_keeps_the_comments_of_the_policy(tmp_path, registry):
+    from shield_redteam.core import yamlio
+
+    f = tmp_path / "policy.yaml"
+    f.write_text("# managed by security\nsignatures:\n  mode: block  # never lower\n  feed: feeds/x.json\n")
+    out, _ = patch_policy(yamlio.load(f), registry, [], "http://redteam/feed.json")
+    text = yamlio.dumps(out)
+    assert "# managed by security" in text and "# never lower" in text and "http://redteam/feed.json" in text

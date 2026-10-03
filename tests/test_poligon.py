@@ -212,3 +212,36 @@ def test_impact_names_the_controls_that_changed():
     ]
     assert changed_controls(new, old)[0] == {"id": "secrets", "what": "switched on"}
     assert changed_controls(old, old) == []
+
+
+def test_switching_keeps_the_comments_of_the_policy_file(tmp_path):
+    from shield_redteam.server.demo import set_enabled
+
+    f = tmp_path / "policy.yaml"
+    f.write_text("# top comment\nsecrets:\n  mode: block   # inline comment\n  entities: {aws: block}\n")
+    set_enabled(f, "secrets", False)
+    text = f.read_text()
+    assert "# top comment" in text and "# inline comment" in text and "enabled: false" in text
+
+
+def test_write_endpoints_refuse_cross_site_requests(tmp_path):
+    from fastapi.testclient import TestClient
+
+    from shield_redteam.config import Config
+    from shield_redteam.server.app import create_app
+    from tests.conftest import DECOYS, FakeLayer
+
+    cfg = Config(tmp_path / "redteam.yaml", {"tripwire": DECOYS, "poligon": {"corpus": str(tmp_path)}})
+    client = TestClient(create_app(cfg, target=FakeLayer(["x"]).target(), background=False))
+    body = '{"text": "hello"}'
+    assert client.post("/api/scan", content=body, headers={"content-type": "text/plain"}).status_code == 415
+    assert (
+        client.post(
+            "/api/scan", content=body, headers={"content-type": "application/json", "origin": "https://evil.example"}
+        ).status_code
+        == 403
+    )
+    ok = client.post(
+        "/api/scan", content=body, headers={"content-type": "application/json", "origin": "http://testserver"}
+    )
+    assert ok.status_code == 200 and ok.json()["tripped"] is False

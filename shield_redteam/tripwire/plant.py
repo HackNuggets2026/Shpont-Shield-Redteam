@@ -10,6 +10,7 @@ The output is a new policy file; the original is never modified. A decoy may dec
 
 from __future__ import annotations
 
+import copy
 from typing import Any
 
 from .registry import Registry
@@ -18,14 +19,15 @@ from .registry import Registry
 def patch_policy(
     policy: dict[str, Any], registry: Registry, decoy_cfg: list[dict[str, Any]], feed_url: str, refresh_seconds: int = 2
 ) -> tuple[dict[str, Any], list[str]]:
-    out = dict(policy)
+    out = copy.deepcopy(policy)  # a round-trip document keeps its comments through the copy
     notes = []
-    sig = dict(out.get("signatures") or {})
-    sig.update({"feed": feed_url, "refresh_seconds": refresh_seconds})
-    out["signatures"] = sig
+    if out.get("signatures") is None:
+        out["signatures"] = {}
+    out["signatures"]["feed"] = feed_url
+    out["signatures"]["refresh_seconds"] = refresh_seconds
     notes.append(f"signatures.feed -> {feed_url} (refresh {refresh_seconds}s)")
 
-    resources = {k: dict(v) for k, v in (out.get("resources") or {}).items()}
+    resources = out.get("resources") or {}
     # Newer Shield versions keep resource data in code (controllayer.services), not in the policy,
     # so there is nothing in the file to plant into: those decoys stay feed-only.
     brokered = any(r.get("type") == "service" for r in resources.values())
@@ -62,6 +64,6 @@ def patch_policy(
             conn["mock_responses"] = mocks
             target["connection"] = conn
             notes.append(f"{decoy.cls} {decoy.id!r} planted in {p['resource']} at {p['path']!r}")
-    if resources:
+    if resources and "resources" not in out:
         out["resources"] = resources
     return out, notes

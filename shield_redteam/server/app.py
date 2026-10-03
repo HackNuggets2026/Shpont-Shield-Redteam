@@ -7,10 +7,10 @@ import json
 import threading
 import time
 from pathlib import Path
-from typing import Any
+from typing import Annotated, Any
 
 import httpx
-from fastapi import FastAPI, Request
+from fastapi import Body, FastAPI, Request
 from fastapi.responses import FileResponse, JSONResponse, PlainTextResponse
 from fastapi.staticfiles import StaticFiles
 
@@ -30,6 +30,7 @@ from .report import markdown
 from .stage import outcome_rows, place, rings, traffic_rows
 
 STATIC = Path(__file__).parent / "static"
+JsonBody = Annotated[dict[str, Any], Body()]
 
 
 def load_base_feed(cfg: Config) -> tuple[dict[str, Any] | None, str]:
@@ -84,6 +85,23 @@ def create_app(cfg: Config, target: Target | None = None, background: bool = Tru
         stop.set()
 
     app = FastAPI(title="Shpont Shield Redteam", lifespan=lifespan)
+
+    @app.middleware("http")
+    async def same_origin_writes(request: Request, call_next):
+        """POSTs here flip Shield's safeguards, so only this page may send them.
+
+        Requiring application/json makes a cross-site browser request trigger a CORS preflight, which
+        this server never answers; a present Origin must also be this server's own.
+        """
+        if request.method == "POST":
+            ctype = request.headers.get("content-type", "").split(";")[0].strip().lower()
+            if ctype != "application/json":
+                return JSONResponse({"error": "send JSON (content-type: application/json)"}, status_code=415)
+            origin = request.headers.get("origin")
+            if origin and origin.split("://", 1)[-1] != request.headers.get("host", ""):
+                return JSONResponse({"error": "cross-origin request refused"}, status_code=403)
+        return await call_next(request)
+
     app.state.poligon, app.state.alerts, app.state.registry = poligon, alerts, registry
     app.mount("/static", StaticFiles(directory=STATIC), name="static")
     app.mount("/app", StaticFiles(directory=STATIC / "app"), name="app")
@@ -189,9 +207,8 @@ def create_app(cfg: Config, target: Target | None = None, background: bool = Tru
         }
 
     @app.post("/api/control")
-    async def control(request: Request):
+    def control(body: JsonBody):
         """Switch one safeguard on or off in the control layer's policy file, then re-test at once."""
-        body = await request.json()
         if not policy_file:
             return JSONResponse(
                 {"error": "set target.policy_file in redteam.yaml to use the switches"}, status_code=409
@@ -206,9 +223,8 @@ def create_app(cfg: Config, target: Target | None = None, background: bool = Tru
         return {"ok": True}
 
     @app.post("/api/try")
-    async def try_text(request: Request):
+    def try_text(body: JsonBody):
         """Evaluate a visitor's own text on the live control layer (unmetered, unscored)."""
-        body = await request.json()
         direction = body.get("direction", "input")
         if direction not in DIRECTIONS:
             return JSONResponse({"error": f"direction must be one of {list(DIRECTIONS)}"}, status_code=400)
@@ -227,9 +243,8 @@ def create_app(cfg: Config, target: Target | None = None, background: bool = Tru
         }
 
     @app.post("/api/steal")
-    async def steal(request: Request):
+    def steal(body: JsonBody):
         """Act as an agent that sends a decoy value out through a tool call: a real request, a real incident."""
-        body = await request.json()
         decoy = registry.get(str(body.get("decoy")))
         key = cfg.target["demo_agent_key"]
         if decoy is None or not key:
@@ -244,8 +259,7 @@ def create_app(cfg: Config, target: Target | None = None, background: bool = Tru
         return poligon.run_now()
 
     @app.post("/api/scan")
-    async def scan(request: Request):
-        body = await request.json()
+    def scan(body: JsonBody):
         hits = detector.scan(str(body.get("text", "")), body.get("direction"))
         return {"tripped": bool(hits), "hits": [h.as_dict() for h in hits]}
 

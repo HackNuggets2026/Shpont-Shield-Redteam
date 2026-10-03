@@ -7,9 +7,8 @@ import json
 import sys
 from pathlib import Path
 
-import yaml
-
 from .config import load
+from .core import yamlio
 from .core.target import GatewayTarget
 from .poligon import corpus
 from .poligon.feedcheck import check_feed
@@ -100,12 +99,12 @@ def cmd_tokens(args: argparse.Namespace) -> int:
 def cmd_plant(args: argparse.Namespace) -> int:
     cfg = load(args.config)
     registry = Registry.from_config(cfg.tripwire)
-    policy = yaml.safe_load(Path(args.policy).read_text())
+    policy = yamlio.load(Path(args.policy))
     url = args.feed_url or f"http://{cfg.server['host']}:{cfg.server['port']}/feed/signatures.json"
     patched, notes = patch_policy(policy, registry, cfg.tripwire["decoys"], url, args.refresh)
     out = Path(args.out)
     out.parent.mkdir(parents=True, exist_ok=True)
-    out.write_text(yaml.safe_dump(patched, sort_keys=False, allow_unicode=True))
+    out.write_text(yamlio.dumps(patched))
     for n in notes:
         print(n)
     print(f"wrote {out}")
