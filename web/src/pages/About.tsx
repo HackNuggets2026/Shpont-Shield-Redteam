@@ -94,7 +94,7 @@ const ICON: Record<string, typeof BookOpen> = {
 const ROUTE: Record<string, string> = { Overview: "/", Safeguards: "/safeguards", Traps: "/traps", "Reach map": "/reach", Autopatch: "/autopatch" }
 
 export function About({ state }: { state: State; stage: Stage }) {
-  const [lang, setLang] = useState<Lang>(() => (localStorage.getItem("redteam-lang") === "pl" ? "pl" : "en"))
+  const [lang, setLang] = useState<Lang>(() => (localStorage.getItem("redteam-lang") === "en" ? "en" : "pl"))
   const t = T[lang]
   const r = state.poligon.report
   const { data: reach } = useReach()
