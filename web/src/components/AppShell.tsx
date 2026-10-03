@@ -63,7 +63,7 @@ export function AppShell({ state, stage, children }: { state?: State; stage?: St
             <div className="text-xs font-medium text-red-600 dark:text-red-400">Redteam</div>
           </div>
         </div>
-        <Highlight as="nav" controlledItems hover value={pathname} className="rounded-lg bg-muted" containerClassName="flex gap-1 overflow-x-auto md:flex-col" mode="parent">
+        <Highlight as="nav" controlledItems hover value={pathname} className="rounded-lg bg-muted" containerClassName="flex gap-1 overflow-x-auto [scrollbar-color:var(--border)_transparent] [scrollbar-width:thin] md:-mx-1 md:min-h-0 md:flex-col md:overflow-y-auto md:px-1" mode="parent">
           {NAV.map(({ to, label, icon: Icon }) => (
             <HighlightItem key={to} value={to} asChild>
               <NavLink to={to} end={to === "/"}
@@ -81,14 +81,7 @@ export function AppShell({ state, stage, children }: { state?: State; stage?: St
             </HighlightItem>
           ))}
         </Highlight>
-        <div className="mt-auto hidden space-y-3 md:block">
-          <ol className="space-y-2 rounded-xl border bg-muted/50 p-3 text-xs text-muted-foreground">
-            {[`Fire ${state ? state.poligon.corpus.attacks + state.poligon.corpus.benign : "test"} messages at Shield`, "Its safeguards react", "Score what got through"].map((t, i) => (
-              <li key={t} className="flex items-center gap-2">
-                <span className="grid size-4.5 shrink-0 place-items-center rounded-full bg-foreground text-[10px] font-semibold text-background">{i + 1}</span>{t}
-              </li>
-            ))}
-          </ol>
+        <div className="mt-auto hidden md:block">
           <div className="flex items-center gap-2 px-1 text-xs text-muted-foreground">
             <span className={cn("size-2 rounded-full", down ? "bg-red-500" : "bg-emerald-500")} />
             <span className="truncate">{down ? "Shield unreachable" : state.target.name.replace(/^https?:\/\//, "")}</span>
