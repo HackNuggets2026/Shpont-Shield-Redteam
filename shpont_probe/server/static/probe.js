@@ -29,25 +29,17 @@
       <tbody>${rows.map((r) => `<tr>${r.map((c, i) => `<td class="${num.includes(i) ? "acl-num" : ""}">${c}</td>`).join("")}</tr>`).join("")}</tbody></table></div>`;
   const stepCard = (n, title, sub, body) => `<div class="Box">
       <div class="Box-header"><h3 class="Box-title"><span class="acl-step">${n}</span>${esc(title)}</h3>
-        <div class="f5 color-fg-muted mt-2">${sub}</div></div>
+        ${sub ? `<div class="f6 color-fg-muted mt-1">${sub}</div>` : ""}</div>
       <div class="Box-body">${body}</div></div>`;
   const mono = (s) => `<span class="text-mono f6">${esc(s)}</span>`;
 
   // What each safeguard is for, in one plain sentence.
   const ABOUT = {
-    auth: "Only callers with a valid key get in.",
-    models: "Only approved AI models may be used.",
-    tool_access: "Each role may call only the tools it is allowed to.",
-    budget: "Limits on requests, tokens and money per person and team.",
-    secrets: "Stops passwords, API keys and private keys from being sent.",
-    pii: "Stops card numbers, bank accounts and national IDs.",
-    signatures: "Stops known attack patterns, loaded from a feed. The traps below are enforced here too.",
-    pii_model: "A model that finds names and addresses a pattern cannot.",
-    prompt_injection: "Stops text that tries to take over the AI's instructions.",
-    data_exfiltration: "Stops attempts to send internal data outside.",
-    confidential_output: "Keeps confidential business information out of replies.",
-    harmful_request: "Stops requests for malware, weapons or harassment.",
-    off_policy_use: "Watches for non-work use. Trial mode: reports, never blocks.",
+    auth: "Valid key required", models: "Approved models only", tool_access: "Tools allowed per role",
+    budget: "Request, token and cost limits", secrets: "Passwords and API keys", pii: "Cards, bank accounts, IDs",
+    signatures: "Known attack patterns", pii_model: "Names and addresses", prompt_injection: "Attempts to take over the AI",
+    data_exfiltration: "Sending data outside", confidential_output: "Confidential info in replies",
+    harmful_request: "Malware, weapons, harassment", off_policy_use: "Non-work use (trial)",
   };
   const postureTone = (p) => (p == null ? "" : p >= 90 ? "ok" : p >= 70 ? "warn" : "bad");
   const segLabel = (id) => { for (const r of stage.rings) for (const s of r.segments) if (s.id === id) return cap(s.label); return cap(id); };
@@ -58,18 +50,16 @@
     const r = st.poligon.report, c = stage.corpus;
     const verdict = r ? `<div class="d-flex flex-items-end mt-3" style="gap:14px">
         <div class="acl-hero ${FG[postureTone(r.posture)] || ""}">${r.posture}</div>
-        <div class="f5 pb-1">out of 100.<br>Stops <b>${r.attacks.stopped} of ${r.attacks.total}</b> attacks, wrongly blocks <b>${r.benign.stopped} of ${r.benign.total}</b> normal requests.</div></div>`
+        <div class="f5 pb-1">/ 100<br><b>${r.attacks.stopped} of ${r.attacks.total}</b> attacks stopped · <b>${r.benign.stopped} of ${r.benign.total}</b> normal requests blocked</div></div>`
       : `<div class="color-fg-muted mt-3">The first test run is still in progress.</div>`;
     return `<div class="Box color-bg-subtle p-4">
       <div class="acl-grid">
         <div class="acl-s6">
-          <p class="acl-lead mb-2">Shield is an AI firewall. Probe checks that it works, by attacking it non-stop.</p>
-          <p class="f5 color-fg-muted mb-0">Every few seconds Probe sends Shield ${c.attacks} known attacks and ${c.benign} ordinary work requests,
-            then scores the result. Change a setting in Shield and the score reacts within seconds.</p>
+          <p class="acl-lead mb-0">Probe attacks the AI firewall non-stop and scores it.</p>
           ${verdict}
         </div>
         <div class="acl-s6">
-          <div class="text-bold mb-2">Live: messages Probe is sending to Shield right now</div>
+          <div class="text-bold mb-2">Live test messages</div>
           <ul class="acl-feed" id="acl-feed"></ul>
         </div>
       </div></div>`;
@@ -102,25 +92,23 @@
       const c = count[s.id] || { stop: 0, miss: 0 }, on = s.state !== "off";
       const sw = s.switchable
         ? `<button type="button" class="btn btn-sm acl-switch ${on ? "" : "btn-danger"}" data-act="switch" data-id="${esc(s.id)}" data-on="${on ? 0 : 1}" ${ui.busy[s.id] ? "disabled" : ""}>${ui.busy[s.id] ? "…" : on ? "Switch off" : "Switch on"}</button>`
-        : muted("always on");
+        : "";
       const state = s.state === "off" ? badge("bad", "OFF") : s.state === "active" ? badge("ok", "on") : badge("neutral", s.state === "shadow" ? "trial" : "log only");
-      const result = c.miss ? `<span class="color-fg-danger text-bold">${c.miss} attack${c.miss > 1 ? "s" : ""} get through</span>${c.stop ? muted(` · ${c.stop} stopped`) : ""}`
-        : c.stop ? `<span class="color-fg-success">${c.stop} attacks stopped</span>` : muted("not exercised by the test set");
-      rows.push([`<b>${esc(cap(s.label))}</b><div class="f6 color-fg-muted">${esc(ABOUT[s.id] || "")}</div>`, state, result, sw]);
+      const result = c.miss ? `<span class="color-fg-danger text-bold">${c.miss} get through</span>${c.stop ? muted(` · ${c.stop} stopped`) : ""}`
+        : c.stop ? `<span class="color-fg-success">${c.stop} stopped</span>` : muted("–");
+      rows.push([`<b>${esc(cap(s.label))}</b> ${muted(esc(ABOUT[s.id] || ""))}`, state, result, sw]);
     }
     const c = st.poligon.changes[0];
     let change = "";
     if (c && (c.opened.length || c.closed.length || c.new_false_positives.length)) {
-      const d = c.posture_after - c.posture_before, leaked = c.opened.filter((o) => !o.technique).slice(0, 3);
-      change = note(`<b>Last change, ${clock(c.ts)}: score ${c.posture_before} → ${c.posture_after}</b> (${d > 0 ? "+" : ""}${d.toFixed(1)}).
-        ${c.opened.length ? ` ${c.opened.length} attacks started getting through.` : ""}${c.closed.length ? ` ${c.closed.length} attacks are stopped again.` : ""}${c.new_false_positives.length ? ` ${c.new_false_positives.length} normal request(s) newly blocked.` : ""}
-        ${leaked.map((o) => `<div class="acl-quote">${esc(o.text)} ${muted("was stopped by " + esc(o.was_caught_by.map((x) => segLabel(x.split("/")[0])).join(", ") || o.was))}</div>`).join("")}`,
+      const leaked = c.opened.filter((o) => !o.technique).slice(0, 2);
+      change = note(`<b>Score ${c.posture_before} → ${c.posture_after}</b>${c.opened.length ? ` · ${c.opened.length} attacks now get through` : ""}${c.closed.length ? ` · ${c.closed.length} stopped again` : ""}${c.new_false_positives.length ? ` · ${c.new_false_positives.length} normal blocked` : ""}
+        ${leaked.map((o) => `<div class="acl-quote">${esc(o.text)}</div>`).join("")}`,
         c.opened.length ? "bad" : "ok");
     }
-    const hint = stage.can_switch ? "" : note("The switches are read-only here: set <code>target.policy_file</code> in probe.yaml (demo/up.sh does it) to flip safeguards from this page. Editing the policy file by hand works either way.", "warn");
-    return stepCard(1, "Switch a safeguard off and see what gets through",
-      "Each row is one protection inside Shield. Switching one off edits Shield's real policy file. Probe re-tests at once and shows the damage.",
-      hint + change + table(["Safeguard", "Status", "Result of the last test", ""], rows));
+    const hint = stage.can_switch ? "" : note("Switches need <code>target.policy_file</code> in probe.yaml.", "warn");
+    return stepCard(1, "Switch a safeguard off, see what gets through", "",
+      hint + change + table(null, rows));
   }
 
   const EXAMPLES = [
@@ -136,18 +124,16 @@
     let out = "";
     if (v) {
       out = v.error ? note(esc(v.error), "bad")
-        : v.stopped ? note(`<b>${v.action === "block" ? "Blocked" : "Sensitive part removed"}</b> by <b>${esc(cap(v.by))}</b> in ${v.ms} ms. ${muted(esc(v.findings.join(", ")))}`, "ok")
-        : note(`<b>Allowed.</b> No safeguard objected (${v.ms} ms). ${v.findings.length ? muted("Noted only: " + esc(v.findings.join(", "))) : ""}`, "warn");
+        : v.stopped ? note(`<b>${v.action === "block" ? "Blocked" : "Redacted"}</b> by <b>${esc(cap(v.by))}</b> · ${v.ms} ms`, "ok")
+        : note(`<b>Allowed</b> · ${v.ms} ms`, "warn");
     }
-    const dirs = [["input", "a prompt to the model"], ["output", "a reply from the model"], ["tool_call", "a tool call by an agent"], ["tool_result", "data returned by a tool"]];
-    return stepCard(2, "Send your own message",
-      "Type anything, or start from an example. It goes through Shield exactly like real traffic and you see which safeguard reacts.",
+    const dirs = [["input", "as a prompt"], ["output", "as a model reply"], ["tool_call", "as a tool call"], ["tool_result", "as tool data"]];
+    return stepCard(2, "Send your own message", "",
       `<div class="acl-chips mb-2">${EXAMPLES.map((e, i) => `<button type="button" class="btn btn-sm" data-act="example" data-i="${i}">${esc(e[0])}</button>`).join("")}</div>
        <textarea id="try-text" class="form-control width-full input-monospace" rows="3" placeholder="Type a message">${esc(ui.text)}</textarea>
        <div class="acl-tools mt-2 mb-3">
-         <span class="f6 color-fg-muted">Send it as</span>
          <select id="try-dir" class="form-select select-sm">${dirs.map(([k, l]) => `<option value="${k}" ${ui.dir === k ? "selected" : ""}>${l}</option>`).join("")}</select>
-         <button type="button" class="btn btn-sm btn-primary" data-act="try">Send to Shield</button>
+         <button type="button" class="btn btn-sm btn-primary" data-act="try">Send</button>
        </div>${out}`);
   }
 
@@ -155,17 +141,13 @@
     const tw = st.tripwire;
     const rows = tw.decoys.map((d) => {
       const hits = tw.alerts.filter((a) => a.decoy === d.id);
-      const status = hits.length ? badge("bad", `used ${hits.length}x, last by ${hits[0].principal}`) : badge("ok", "untouched");
-      const btn = stage.can_steal ? `<button type="button" class="btn btn-sm" data-act="steal" data-id="${esc(d.id)}" ${ui.busy["steal-" + d.id] ? "disabled" : ""}>Simulate a theft</button>` : "";
-      return [`<b>${esc(d.label)}</b><div class="f6 color-fg-muted">hidden in: ${esc(d.planted_in)}</div>`, status, btn];
+      const status = hits.length ? badge("bad", `${hits[0].principal} · ${hits.length}x`) : badge("ok", "untouched");
+      const btn = stage.can_steal ? `<button type="button" class="btn btn-sm" data-act="steal" data-id="${esc(d.id)}" ${ui.busy["steal-" + d.id] ? "disabled" : ""}>Steal</button>` : "";
+      return [`<b>${esc(d.label)}</b>`, status, btn];
     });
-    const inc = tw.alerts.slice(0, 6).map((a) => [muted(clock(a.ts)), `<b>${esc(a.principal)}</b> ${muted(`${esc(a.team)}/${esc(a.role)}`)}`, esc(a.label),
-      muted(`${esc(words(a.direction))}${a.tool ? " · " + esc(a.tool) : ""}`), badge(a.action === "block" ? "ok" : "warn", a.action === "block" ? "blocked" : a.action)]);
-    return stepCard(3, "Traps: catch whoever uses what nobody should",
-      "These are fake secrets and fake records planted on purpose. No honest person or agent ever needs them, so any use is a real incident, with a name on it.",
-      table(["Trap", "Status", ""], rows) +
-      (inc.length ? `<div class="text-bold mt-3 mb-1">Incidents</div>` + table(["Time", "Who", "Trap", "How", "Shield"], inc)
-        : `<div class="f6 color-fg-muted mt-2">No incident yet. Press "Simulate a theft": Probe acts as an agent that sends the trap value to an outside website.</div>`));
+    const inc = tw.alerts.slice(0, 5).map((a) => [muted(clock(a.ts)), `<b>${esc(a.principal)}</b>`, esc(a.label), badge(a.action === "block" ? "ok" : "warn", a.action === "block" ? "blocked" : a.action)]);
+    return stepCard(3, "Traps", "Fake secrets. Any use is an incident.",
+      table(null, rows) + (inc.length ? `<div class="text-bold mt-3 mb-1">Incidents</div>` + table(null, inc) : ""));
   }
 
   function details() {
@@ -178,7 +160,7 @@
     const tech = r.by_technique.map((g) => [esc(cap(g.name)), `${g.stopped} / ${g.total}`, meter(g.total ? (100 * g.stopped) / g.total : 0, "info")]);
     const bad = fc.rows.filter((x) => !x.ok);
     return `<details class="Box p-3">
-      <summary class="text-bold">Full results for the security team</summary>
+      <summary class="text-bold">Full results</summary>
       <div class="acl-grid mt-3">
         <div class="acl-s6"><div class="text-bold mb-1">Attacks that still get through (${open.length})</div>${open.length ? table(["Test", "Type", "Text"], open) : muted("None.")}
           <div class="text-bold mt-3 mb-1">Normal requests blocked by mistake (${fp.length})</div>${fp.length ? table(["Test", "Blocked by", "Text"], fp) : muted("None.")}</div>
@@ -197,7 +179,7 @@
     <div class="Header">
       <div class="Header-item"><span class="Header-link f4 text-bold">Shpont Probe</span></div>
       <div class="Header-item Header-item--full"><span class="f6 text-mono" style="opacity:.75" id="acl-meta"></span></div>
-      <div class="Header-item acl-tools"><button type="button" class="btn btn-sm btn-primary" data-act="run">Run the test now</button></div>
+      <div class="Header-item acl-tools"><button type="button" class="btn btn-sm btn-primary" data-act="run">Re-test</button></div>
     </div>
     <div class="container-xl px-3 py-4">
       <div id="s-alerts"></div>
@@ -222,7 +204,7 @@
     if (!st || !stage) return;
     const t = st.target || {};
     document.getElementById("acl-meta").textContent = t.error ? `Shield at ${t.name}: ${t.error}`
-      : `testing Shield at ${t.name} · policy ${t.policy?.version} · ${t.semantic?.backend} decision backend`;
+      : `${t.name} · policy ${t.policy?.version}`;
     put("s-alerts", (st.poligon.error ? note(esc(st.poligon.error), "bad") : "") +
       (t.policy?.last_error ? note(`Shield rejected the last policy edit and kept the previous one: ${esc(t.policy.last_error)}`, "warn") : "") +
       (ui.error ? note(esc(ui.error), "bad") : ""));
