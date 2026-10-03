@@ -102,7 +102,11 @@ def test_real_use_of_a_decoy_becomes_an_attributed_alert(shield):
     r = client.post(
         "/v1/guard",
         headers={"x-api-key": "ops-agent-key"},
-        json={"direction": "tool_call", "tool": "http_get", "text": json.dumps({"url": "https://x.example", "q": token})},
+        json={
+            "direction": "tool_call",
+            "tool": "http_get",
+            "text": json.dumps({"url": "https://x.example", "q": token}),
+        },
     )
     assert r.json()["action"] == "block"
     store = AlertStore(registry)
