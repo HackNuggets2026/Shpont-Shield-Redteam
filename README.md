@@ -32,15 +32,19 @@ flowchart LR
   P & A --> UI
 ```
 
-## The panel
+## The dashboard
 
-`/` is a hands-on page, built with Primer CSS and the same building blocks as the Shield panels so its parts can move into the Shield console as they are.
+`/` runs inside the Shield security console shell (tabs, tiles, tables, SVG charts), so Probe looks and behaves like the rest of the console. Probe's part is one file, `shpont_probe/server/static/console/views/probe.js`, written against Shield's `docs/console-contract.md`.
 
-- **Top**: one sentence on what Shield and Probe are, the measured score, and a live feed of the real test messages being sent, each marked stopped, got through, allowed or blocked by mistake.
-- **1. Switch a safeguard off and see what gets through**: every Shield control with a one-line description and a switch. The switch flips `enabled` in Shield's real policy file; Probe re-tests at once and quotes the attacks that started passing.
-- **2. Send your own message**: type anything (or pick an example) and see which safeguard reacts, through the live layer.
-- **3. Traps**: the Tripwire decoys, with a "Simulate a theft" button that makes a real request as an agent and produces a real, attributed incident.
-- **Full results for the security team** (collapsed): open attacks, false positives, coverage by attack type, evasion, latency, feed check, report.
+| Tab | Shows |
+|---|---|
+| **Self-test** | score, score per test run with the last settings change, where the attacks end (by stage, or through), stopped by attack type and by disguise, live test messages |
+| **Safeguards** | every control with an on/off switch that edits Shield's real policy file, and what it stopped, missed and wrongly blocked |
+| **Traps** | the Tripwire decoys, a "Simulate a theft" button, incidents and who triggered them |
+| **Try a message** | send any text through the live layer and see which safeguard reacts |
+| **Findings** | attacks that get through, normal requests blocked by mistake, disguised attacks that pass, feed check, report |
+
+To merge into Shield: copy `views/probe.js` into `controllayer/dashboard/views/`, add its script tag to `panel.html`, set `window.PROBE_API` to the Probe service. See `shpont_probe/server/static/console/README.md`.
 
 The switches need `target.policy_file` in `probe.yaml` (set by `demo/up.sh`); the theft button needs `target.demo_agent_key`.
 
@@ -100,7 +104,7 @@ Everything is in [`probe.yaml`](probe.yaml): the target, the corpus, the decoys 
 
 | Endpoint | For |
 |---|---|
-| `/` | the panel |
+| `/` | the dashboard |
 | `/api/stage` | controls in evaluation order with live state, and where each payload stopped |
 | `/feed/signatures.json` | the managed feed plus one signature per decoy; point the control layer's `signatures.feed` here |
 | `/api/state` | everything the dashboard shows, as JSON |

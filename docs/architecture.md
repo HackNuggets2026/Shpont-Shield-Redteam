@@ -11,7 +11,7 @@ shpont_probe/
     mutate.py    evasion rewrites
     feedcheck.py signature feed self-test
   tripwire/      tokens -> registry -> detector | feed | plant | drills | alerts
-  server/        FastAPI app, Primer panel (stage.py maps findings to controls), Markdown report
+  server/        FastAPI app, console views (static/console/views/probe.js), hands-on actions, Markdown report
   config.py      probe.yaml
   cli.py         serve | run | feed | tokens | plant
 corpus/          attacks/*.yaml, benign/*.yaml
@@ -33,7 +33,7 @@ Neither seam requires a change in Shield.
 | `shpont_probe/poligon/` | `controllayer/poligon/`, with an in-process target |
 | `shpont_probe/tripwire/` | `controllayer/tripwire/`, registry configured under a `tripwire:` key in `policy.yaml` |
 | `probe.yaml` decoys | `policy.yaml` section, hot-reloaded with everything else |
-| panel cards (Primer, same helpers as `dashboard/core.js`) | cards on the security console |
+| `static/console/views/probe.js` | `controllayer/dashboard/views/probe.js`, five tabs in the security console |
 | `corpus/` | `tests/corpus/`, run by `pytest` and by the live service |
 
 Two small requests to Shield that would remove the current limits: let `/admin/try` accept `tool` and `model`, and tag self-test events with their own channel.

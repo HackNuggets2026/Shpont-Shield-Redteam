@@ -116,6 +116,19 @@ def create_app(cfg: Config, target: Target | None = None, background: bool = Tru
             "feedcheck": check_feed(merged),
         }
 
+    @app.get("/admin/summary")
+    def shield_summary():
+        """What the console shell needs for its header. Standalone, Probe relays it from the control layer."""
+        try:
+            info = target.describe()
+        except Exception:  # noqa: BLE001
+            return {"policy": {}}
+        return {
+            "policy": info.get("policy") or {},
+            "feed": info.get("feed") or {},
+            "semantic": info.get("semantic") or {},
+        }
+
     @app.get("/api/stage")
     def stage():
         try:

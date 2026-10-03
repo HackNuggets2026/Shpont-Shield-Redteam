@@ -19,7 +19,7 @@ shpont-probe = "shpont_probe.cli:main"
 include = ["shpont_probe*"]
 
 [tool.setuptools.package-data]
-shpont_probe = ["server/static/*"]
+shpont_probe = ["server/static/*", "server/static/console/*", "server/static/console/views/*"]
 
 [tool.pytest.ini_options]
 testpaths = ["tests"]
