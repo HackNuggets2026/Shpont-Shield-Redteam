@@ -80,7 +80,7 @@ export function Overview({ state, stage }: { state: State; stage: Stage }) {
         <Pipeline stage={stage} onToggle={toggle} pending={pending} />
       </Panel>
 
-      <Panel className="col-span-12 lg:col-span-4" title="How safe is it right now?" hint="Measured by attacking the firewall, not estimated">
+      <Panel className="col-span-12 lg:col-span-4" beam={tone === "good" ? "#10b981" : tone === "warn" ? "#f59e0b" : "#ef4444"} title="How safe is it right now?" hint="Measured by attacking the firewall, not estimated">
         <div className="flex flex-col items-center">
           <ScoreRing value={r.posture} />
           <p className="mt-1 text-center text-sm">

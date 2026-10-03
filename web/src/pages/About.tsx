@@ -1,9 +1,10 @@
-import { ArrowRight, BookOpen, FlaskConical, GitCompareArrows, LayoutDashboard, Network, ShieldCheck, Siren, Swords, Wand2 } from "lucide-react"
-import { useState } from "react"
+import { ArrowRight } from "lucide-react"
+import { Fragment, useState } from "react"
 import { Link } from "react-router-dom"
 
 import { Panel } from "@/components/bits"
 import { type Stage, type State, useReach } from "@/lib/api"
+import { GROUPS } from "@/lib/nav"
 import { cn } from "@/lib/utils"
 
 type Lang = "en" | "pl"
@@ -25,6 +26,9 @@ const T = {
       "/safeguards": ["Safeguards", "The guard's individual protections. Switch one off and watch the score drop."],
       "/attacks": ["Attacks", "Which attacks get through, which normal requests get blocked, and whether disguised attacks are caught."],
       "/traps": ["Traps", "Fake passwords and fake customers nobody honest touches. Whoever uses one is caught, by name."],
+      "/referee": ["Referee", "The same test fired at all four gateways the team built, side by side, with the best part of each for the merge."],
+      "/memory": ["Memory guard", "What agents remember long-term. Outside content is checked before it is kept; planted instructions are held back."],
+      "/trail": ["Data trail", "Customer data an agent read is followed. If another agent tries to send it out, it is blocked and linked to the read."],
       "/reach": ["Reach map", "Who could leak data: anyone who reads private data, reads outside content and can send data out, all at once."],
       "/whatif": ["What-if", "Try a settings change on a copy of the guard first. See the damage before it happens."],
       "/autopatch": ["Autopatch", "For each attack that gets through, the system writes a rule, proves it blocks no normal work, and applies it in one click."],
@@ -63,6 +67,9 @@ const T = {
       "/safeguards": ["Safeguards", "Pojedyncze zabezpieczenia ochroniarza. Wyłącz jedno i patrz, jak spada ocena."],
       "/attacks": ["Attacks", "Które ataki przechodzą, które zwykłe prośby są blokowane i czy przebrane ataki są łapane."],
       "/traps": ["Traps", "Fałszywe hasła i fałszywi klienci, których nikt uczciwy nie dotknie. Kto użyje, jest złapany z nazwiska."],
+      "/referee": ["Referee", "Ten sam test puszczony na wszystkie 4 bramki zespołu, obok siebie, z najlepszą częścią każdej do scalenia."],
+      "/memory": ["Memory guard", "Co agenci zapamiętują na dłużej. Treść z zewnątrz jest sprawdzana przed zapisaniem, podrzucone polecenia trafiają do kwarantanny."],
+      "/trail": ["Data trail", "Dane klienta odczytane przez agenta są śledzone. Gdy inny agent próbuje je wysłać na zewnątrz, zostaje zablokowany, a próba połączona z odczytem."],
       "/reach": ["Reach map", "Kto mógłby wynieść dane: ktoś, kto naraz czyta prywatne dane, czyta treści z zewnątrz i może wysyłać na zewnątrz."],
       "/whatif": ["What-if", "Zmianę ustawień najpierw sprawdzasz na kopii ochroniarza. Widzisz szkody, zanim się wydarzą."],
       "/autopatch": ["Autopatch", "Dla ataku, który przechodzi, system pisze regułę, udowadnia, że nie blokuje zwykłej pracy, i wdraża ją jednym kliknięciem."],
@@ -87,10 +94,6 @@ const T = {
   },
 }
 
-const ICON: Record<string, typeof BookOpen> = {
-  "/": LayoutDashboard, "/safeguards": ShieldCheck, "/attacks": Swords, "/traps": Siren,
-  "/reach": Network, "/whatif": GitCompareArrows, "/autopatch": Wand2, "/playground": FlaskConical,
-}
 const ROUTE: Record<string, string> = { Overview: "/", Safeguards: "/safeguards", Traps: "/traps", "Reach map": "/reach", Autopatch: "/autopatch" }
 
 export function About({ state }: { state: State; stage: Stage }) {
@@ -116,7 +119,7 @@ export function About({ state }: { state: State; stage: Stage }) {
         </Panel>
         <Panel title={t.mineTitle}>
           <p className="text-sm leading-relaxed text-muted-foreground">{t.mineLead}</p>
-          <blockquote className="mt-3 border-l-4 border-red-500 pl-3 text-sm leading-relaxed font-medium">{t.mineQuote}</blockquote>
+          <blockquote className="mt-3 border-l-4 border-brand pl-3 text-sm leading-relaxed font-medium">{t.mineQuote}</blockquote>
           {r ? <p className="mt-3 rounded-lg bg-muted px-3 py-2 text-xs tabular-nums">
             {t.live(String(r.posture), String(r.attacks.total - r.attacks.stopped), reach?.flagged.length ?? 0, state.tripwire.incidents)}
           </p> : null}
@@ -124,19 +127,29 @@ export function About({ state }: { state: State; stage: Stage }) {
       </div>
 
       <Panel title={t.tabsTitle}>
-        <ul className="grid gap-2 sm:grid-cols-2">
-          {Object.entries(t.tabs).map(([to, [name, line]]) => {
-            const Icon = ICON[to]
+        <div className="space-y-3">
+          {GROUPS.map((g) => {
+            const items = g.items.filter((i) => t.tabs[i.to])
             return (
-              <li key={to}>
-                <Link to={to} className="flex h-full gap-3 rounded-lg border p-3 transition-colors hover:bg-muted/60">
-                  <Icon className="mt-0.5 size-4 shrink-0 text-muted-foreground" />
-                  <span className="text-sm"><b>{name}</b><span className="block text-muted-foreground">{line}</span></span>
-                </Link>
-              </li>
+              <Fragment key={g.label ?? "start"}>
+                {g.label ? <div className="font-mono text-[10px] font-medium tracking-widest text-muted-foreground uppercase">{g.label}</div> : null}
+                <ul className="grid gap-2 sm:grid-cols-2">
+                  {items.map(({ to, icon: Icon }) => {
+                    const [name, line] = t.tabs[to]
+                    return (
+                      <li key={to}>
+                        <Link to={to} className="group flex h-full gap-3 rounded-lg border p-3 transition-colors hover:border-brand/40 hover:bg-brand-soft">
+                          <Icon className="mt-0.5 size-4 shrink-0 text-muted-foreground transition-colors group-hover:text-brand" animateOnHover />
+                          <span className="text-sm"><b>{name}</b><span className="block text-muted-foreground">{line}</span></span>
+                        </Link>
+                      </li>
+                    )
+                  })}
+                </ul>
+              </Fragment>
             )
           })}
-        </ul>
+        </div>
       </Panel>
 
       <div className="grid gap-4 md:grid-cols-2">
