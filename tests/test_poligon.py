@@ -199,3 +199,16 @@ def test_switching_a_control_edits_only_that_flag(tmp_path):
     assert switchable("secrets", doc) and switchable("prompt_injection", doc) and not switchable("auth", doc)
     with pytest.raises(NotSwitchable):
         set_enabled(f, "auth", False)
+
+
+def test_impact_names_the_controls_that_changed():
+    from shield_redteam.poligon.score import changed_controls
+
+    old = "policy=a|controls=secrets:1block0,pii:1redact0,prompt_injection:1block0"
+    new = "policy=b|controls=secrets:0block0,pii:1redact0,prompt_injection:1log0"
+    assert changed_controls(old, new) == [
+        {"id": "secrets", "what": "switched off"},
+        {"id": "prompt_injection", "what": "changed"},
+    ]
+    assert changed_controls(new, old)[0] == {"id": "secrets", "what": "switched on"}
+    assert changed_controls(old, old) == []

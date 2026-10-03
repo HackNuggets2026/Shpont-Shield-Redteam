@@ -111,6 +111,23 @@ def _cause(old: str, new: str) -> list[str]:
     return [k for k in b if a.get(k) != b[k]] + [k for k in a if k not in b]
 
 
+def _controls(fingerprint: str) -> dict[str, str]:
+    seg = next((x for x in fingerprint.split("|") if x.startswith("controls=")), "controls=")
+    return dict(item.split(":", 1) for item in seg[len("controls=") :].split(",") if ":" in item)
+
+
+def changed_controls(old: str, new: str) -> list[dict[str, Any]]:
+    """Controls whose enabled flag, mode or shadow flag differs between two fingerprints."""
+    a, b = _controls(old), _controls(new)
+    out = []
+    for name in b:
+        if name in a and a[name] != b[name]:
+            was_on, is_on = a[name][:1] == "1", b[name][:1] == "1"
+            what = "switched off" if was_on and not is_on else "switched on" if is_on and not was_on else "changed"
+            out.append({"id": name, "what": what})
+    return out
+
+
 def impact(before: Run, after: Run) -> dict[str, Any]:
     """What a configuration change did, case by case: the answer to "what did my edit just open?"."""
     old, new = before.by_id(), after.by_id()
@@ -133,6 +150,7 @@ def impact(before: Run, after: Run) -> dict[str, Any]:
         "from": before.fingerprint,
         "to": after.fingerprint,
         "cause": _cause(before.fingerprint, after.fingerprint),
+        "controls": changed_controls(before.fingerprint, after.fingerprint),
         "posture_before": rb["posture"],
         "posture_after": ra["posture"],
         "opened": opened,

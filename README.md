@@ -34,17 +34,20 @@ flowchart LR
 
 ## The dashboard
 
-`/` runs inside the Shield security console shell (tabs, tiles, tables, SVG charts), so Redteam looks and behaves like the rest of the console. Redteam's part is one file, `shield_redteam/server/static/console/views/redteam.js`, written against Shield's `docs/console-contract.md`.
+`/` is one page where every block answers a question, drawn from the live layer (charts: Apache ECharts, vendored, works offline).
 
-| Tab | Shows |
-|---|---|
-| **Self-test** | score, score per test run with the last settings change, where the attacks end (by stage, or through), stopped by attack type and by disguise, live test messages |
-| **Safeguards** | every control with an on/off switch that edits Shield's real policy file, and what it stopped, missed and wrongly blocked |
-| **Traps** | the Tripwire decoys, a "Simulate a theft" button, incidents and who triggered them |
-| **Try a message** | send any text through the live layer and see which safeguard reacts |
-| **Findings** | attacks that get through, normal requests blocked by mistake, disguised attacks that pass, feed check, report |
+| Block | Answers | Wired to |
+|---|---|---|
+| **How safe is it right now?** | the measured score, attacks stopped, normal requests blocked, delay | the last corpus run |
+| **What happens to every test message?** | a flow diagram: attacks and normal requests on the left, the safeguard that caught each in the middle, the outcome on the right | click a safeguard (or its chip) to flip `enabled` in Shield's real policy file; the flow re-draws after the re-test |
+| **Did a settings change break anything?** | score per run with a pin on every change, naming the control and quoting an attack that now passes | Poligon's change log |
+| **Can an attacker disguise it?** | share of rewritten attacks still stopped, per disguise | evasion mutants |
+| **Where are the holes?** | attack type by channel, stopped of sent | per-case outcomes |
+| **Who took the bait?** | Tripwire decoys, a "Simulate theft" button, attributed incidents | a real request with an agent key, then Shield's audit trail |
+| **Try to get something past it** | type any message, see which safeguard reacts | the live layer |
+| **Live test messages** | the real payloads and their outcome | the last corpus run |
 
-To merge into Shield: copy `views/redteam.js` into `controllayer/dashboard/views/`, add its script tag to `panel.html`, set `window.REDTEAM_API` to the Redteam service. See `shield_redteam/server/static/console/README.md`.
+`/console` shows the same data as five tabs inside the Shield security console shell: Redteam's part there is one file, `shield_redteam/server/static/console/views/redteam.js`, written against Shield's `docs/console-contract.md`. To merge into Shield: copy it into `controllayer/dashboard/views/`, add its script tag to `panel.html`, set `window.REDTEAM_API` to the Redteam service.
 
 The switches need `target.policy_file` in `redteam.yaml` (set by `demo/up.sh`); the theft button needs `target.demo_agent_key`.
 
@@ -52,7 +55,7 @@ The switches need `target.policy_file` in `redteam.yaml` (set by `demo/up.sh`); 
 
 ```bash
 python -m venv .venv && .venv/bin/pip install -e '.[dev]'
-.venv/bin/python -m pytest          # 57 tests, ~2 s; 4 of them run against the real Shield in-process
+.venv/bin/python -m pytest          # 58 tests, ~2 s; 4 of them run against the real Shield in-process
 
 # Shield checked out next to this repo, with its own .venv (see its README):
 demo/up.sh                          # starts both, decoys planted
@@ -105,6 +108,7 @@ Everything is in [`redteam.yaml`](redteam.yaml): the target, the corpus, the dec
 | Endpoint | For |
 |---|---|
 | `/` | the dashboard |
+| `/console` | the same data as tabs in the Shield console shell |
 | `/api/stage` | controls in evaluation order with live state, and where each payload stopped |
 | `/feed/signatures.json` | the managed feed plus one signature per decoy; point the control layer's `signatures.feed` here |
 | `/api/state` | everything the dashboard shows, as JSON |

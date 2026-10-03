@@ -260,4 +260,9 @@ def create_app(cfg: Config, target: Target | None = None, background: bool = Tru
     def index():
         return FileResponse(STATIC / "index.html")
 
+    @app.get("/console")
+    def console():
+        """The same data as tabs inside the Shield security console shell (the merge path)."""
+        return FileResponse(STATIC / "console" / "index.html")
+
     return app
